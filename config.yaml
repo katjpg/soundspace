@@ -3,10 +3,10 @@ data_root: "../data"
 datasets:
   mtg_jamendo:
     root: "../data/mtg-jamendo-dataset"
-    annotations_dir: "data"
+    metadata_file: "data/autotagging_moodtheme.tsv"
     splits_dir: "data/splits"
-    audio_dir: "downloads/autotagging-moodtheme/audio-low"
-
+    audio_root: "downloads"
+    
   deam:
     root: "../data/deam"
     audio_dir: "audio"
