@@ -3,9 +3,9 @@ data_root: "../data"
 datasets:
   mtg_jamendo:
     root: "../data/mtg-jamendo-dataset"
-    annotations_dir: "derived/music-classification-annotations"
-    splits_dir: "split"
-    audio_dir: "data"
+    annotations_dir: "data"
+    splits_dir: "data/splits"
+    audio_dir: "downloads/autotagging-moodtheme/audio-low"
 
   deam:
     root: "../data/deam"
