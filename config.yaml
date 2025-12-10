@@ -1,0 +1,11 @@
+data_root: "../data"
+
+datasets:
+  mtg_jamendo:
+    root: "../data/mtg-jamendo-dataset"
+    annotations_dir: "derived/music-classification-annotations"
+    splits_dir: "split"
+    audio_dir: "data"
+
+  deam:
+    root: "../data/deam"
