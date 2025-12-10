@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.11"
 
 dependencies = [
+    "essentia>=2.1b6.dev1389",
     "gdown>=4.2.1",
     "matplotlib>=3.5.1",
     "nexaai[mlx]>=1.0.31",
