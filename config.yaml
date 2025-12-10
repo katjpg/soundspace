@@ -9,3 +9,10 @@ datasets:
 
   deam:
     root: "../data/deam"
+    audio_dir: "audio"
+    features_dir: "features"
+    annotations:
+      averaged_dynamic_dir: "annotations/averaged/dynamic"
+      averaged_song_level_dir: "annotations/averaged/song-level"
+      per_rater_dynamic_dir: "annotations/per-rater/dynamic"
+      per_rater_song_level_dir: "annotations/per-rater/song-level"
