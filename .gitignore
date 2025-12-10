@@ -8,6 +8,9 @@ wheels/
 # virtual env
 .venv
 
+# env variables
+.env
+
 # misc
 /docs
 
