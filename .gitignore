@@ -10,7 +10,6 @@ wheels/
 
 # misc
 /docs
-/data 
 
 # for dev / prototyping purposes
 /notebooks
