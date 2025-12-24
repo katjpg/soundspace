@@ -2,13 +2,13 @@ data_root: "../data"
 
 datasets:
   mtg_jamendo:
-    root: "../data/mtg-jamendo-dataset"
+    root: "mtg-jamendo-dataset"
     metadata_file: "data/autotagging.tsv"
     splits_dir: "data/splits"
     audio_root: "downloads"
-    
+
   deam:
-    root: "../data/deam"
+    root: "deam"
     audio_dir: "audio"
     features_dir: "features"
     annotations:
@@ -16,3 +16,4 @@ datasets:
       averaged_song_level_dir: "annotations/averaged/song-level"
       per_rater_dynamic_dir: "annotations/per-rater/dynamic"
       per_rater_song_level_dir: "annotations/per-rater/song-level"
+
