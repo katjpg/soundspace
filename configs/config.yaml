@@ -1,5 +1,25 @@
 data_root: "../../data"
 
+models:
+  root: "models"
+  essentia:
+    cache_dir: "essentia"
+    inference:
+      sample_rate: 16000
+      embedding_output: "model/dense/BiasAdd"
+      valence_arousal_output: "model/Identity"
+    models:
+      msd_musicnn_v1:
+        pb: "msd-musicnn-1.pb"
+        json: "msd-musicnn-1.json"
+        url_pb: "https://essentia.upf.edu/models/autotagging/msd/msd-musicnn-1.pb"
+        url_json: "https://essentia.upf.edu/models/autotagging/msd/msd-musicnn-1.json"
+      deam_v2:
+        pb: "deam-msd-musicnn-2.pb"
+        json: "deam-msd-musicnn-2.json"
+        url_pb: "https://essentia.upf.edu/models/classification-heads/deam/deam-msd-musicnn-2.pb"
+        url_json: "https://essentia.upf.edu/models/classification-heads/deam/deam-msd-musicnn-2.json"
+
 datasets:
   mtg_jamendo:
     root: "mtg-jamendo-dataset"
@@ -16,4 +36,3 @@ datasets:
       averaged_song_level_dir: "annotations/averaged/song-level"
       per_rater_dynamic_dir: "annotations/per-rater/dynamic"
       per_rater_song_level_dir: "annotations/per-rater/song-level"
-
