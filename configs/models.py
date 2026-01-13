@@ -31,8 +31,7 @@ class ModelsConfig:
     root: Path
     essentia: EssentiaConfig
 
-
-def load_models_config(config_path: Path | None = None) -> ModelsConfig:
+def load_config(config_path: Path | None = None) -> ModelsConfig:
     if config_path is None:
         config_path = Path(__file__).parent / "config.yaml"
 
