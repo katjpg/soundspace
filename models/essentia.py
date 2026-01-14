@@ -1,103 +1,72 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
-import urllib.request
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from configs.models import EssentiaConfig
+from configs.models import ModelConfig
 
 
 FloatArray = npt.NDArray[np.float32]
-
-MSD_MUSICNN_V1: Final[str] = "msd_musicnn_v1"
-DEAM_V2: Final[str] = "deam_v2"
-
-
-@dataclass(frozen=True, slots=True)
-class ModelPaths:
-    pb: Path
-    json: Path
 
 
 @dataclass(frozen=True, slots=True)
 class AffectPredictor:
     emb_predictor: Any
     va_predictor: Any
-    sr: int
+    sample_rate: int
 
 
-def from_pretrained(config: EssentiaConfig) -> AffectPredictor:
+def from_pretrained(
+    config: ModelConfig,
+    model_name: str = "musicnn",
+    sample_rate: int = 16000,
+) -> AffectPredictor:
+    """
+    Load encoder and VA predictor from config.
+    
+    Args:
+        config: Model configuration w/ paths to weights and metadata.
+        model_name: Name of model in config (default: "musicnn").
+        sample_rate: Audio sample rate for inference (default: 16000).
+    """
     _check_essentia_available()
-
-    model_paths = _get_model_paths(config)
-
+    
+    if model_name not in config.models:
+        available: list[str] = sorted(config.models.keys())
+        raise ValueError(f"unknown model {model_name!r}. available: {available}")
+    
+    model = config.models[model_name]
+    
+    if model.encoder is None:
+        raise ValueError(f"model {model_name!r} has no encoder spec")
+    if model.predictor is None:
+        raise ValueError(f"model {model_name!r} has no predictor spec")
+    
+    # verify model files exist
+    if model.encoder.weights is None or not model.encoder.weights.exists():
+        raise FileNotFoundError(f"encoder weights not found: {model.encoder.weights}")
+    if model.predictor.weights is None or not model.predictor.weights.exists():
+        raise FileNotFoundError(f"predictor weights not found: {model.predictor.weights}")
+    
     import essentia.standard as es  # type: ignore
-
+    
     emb_pred = es.TensorflowPredictMusiCNN(  # type: ignore
-        graphFilename=str(model_paths[MSD_MUSICNN_V1].pb),
-        output=config.inference.embedding_output,
+        graphFilename=str(model.encoder.weights),
+        output=model.encoder.output,
     )
+    
     va_pred = es.TensorflowPredict2D(  # type: ignore
-        graphFilename=str(model_paths[DEAM_V2].pb),
-        output=config.inference.valence_arousal_output,
+        graphFilename=str(model.predictor.weights),
+        output=model.predictor.output,
     )
-
+    
     return AffectPredictor(
         emb_predictor=emb_pred,
         va_predictor=va_pred,
-        sr=config.inference.sample_rate,
+        sample_rate=sample_rate,
     )
-
-
-def download_pretrained(config: EssentiaConfig, *, force: bool = False) -> dict[str, ModelPaths]:
-    config.cache_dir.mkdir(parents=True, exist_ok=True)
-
-    paths: dict[str, ModelPaths] = {}
-
-    for model_key, model_spec in config.models.items():
-        pb_path = config.cache_dir / model_spec.pb
-        json_path = config.cache_dir / model_spec.json
-
-        if not pb_path.exists() or force:
-            _download_file(model_spec.url_pb, pb_path)
-
-        if not json_path.exists() or force:
-            _download_file(model_spec.url_json, json_path)
-
-        paths[model_key] = ModelPaths(pb=pb_path, json=json_path)
-
-    return paths
-
-
-def _get_model_paths(config: EssentiaConfig) -> dict[str, ModelPaths]:
-    config.cache_dir.mkdir(parents=True, exist_ok=True)
-
-    missing: list[Path] = []
-    paths: dict[str, ModelPaths] = {}
-
-    for model_key, model_spec in config.models.items():
-        pb_path = config.cache_dir / model_spec.pb
-        json_path = config.cache_dir / model_spec.json
-
-        paths[model_key] = ModelPaths(pb=pb_path, json=json_path)
-
-        if not pb_path.exists():
-            missing.append(pb_path)
-        if not json_path.exists():
-            missing.append(json_path)
-
-    if missing:
-        download_pretrained(config)
-
-    for model_key, model_path in paths.items():
-        if not model_path.pb.exists():
-            raise FileNotFoundError(f"model file not found after download: {model_path.pb}")
-        if not model_path.json.exists():
-            raise FileNotFoundError(f"model file not found after download: {model_path.json}")
-
-    return paths
 
 
 def _check_essentia_available() -> None:
@@ -106,17 +75,10 @@ def _check_essentia_available() -> None:
     except ImportError as e:
         raise ImportError(
             "essentia-tensorflow required for affect prediction. "
-            "Install with: pip install essentia-tensorflow"
+            "install: pip install essentia-tensorflow"
         ) from e
-
+    
     required = ["TensorflowPredict2D", "TensorflowPredictMusiCNN"]
     missing = [name for name in required if not hasattr(es, name)]
     if missing:
         raise ImportError(f"essentia.standard missing required components: {missing}")
-
-
-def _download_file(url: str, dest: Path) -> None:
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".tmp")
-    urllib.request.urlretrieve(url, tmp)
-    tmp.replace(dest)
