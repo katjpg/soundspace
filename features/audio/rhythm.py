@@ -12,24 +12,21 @@ class RhythmFeatures:
     tempo_bpm: float
     onset_strength_mean: float
     onset_strength_std: float
-
+    
     def as_dict(self) -> dict[str, float]:
-        """Return flat dict for CSV export."""
         return {k: float(v) for k, v in asdict(self).items()}
 
 
 def extract_rhythm(audio_path: Path, *, sr: int = 22050) -> RhythmFeatures:
-    """Extract rhythm features from audio file."""
     y, sr_loaded = load_audio(audio_path, sr=sr)
     return compute_rhythm(y=y, sr=sr_loaded)
 
 
 def compute_rhythm(*, y: np.ndarray, sr: int) -> RhythmFeatures:
-    """Compute rhythm features from waveform."""
     tempo_bpm = _estimate_tempo(y=y, sr=sr)
     onset_env = _compute_onset_strength(y=y, sr=sr)
     onset_mean, onset_std = _mean_std(onset_env)
-
+    
     return RhythmFeatures(
         tempo_bpm=tempo_bpm,
         onset_strength_mean=onset_mean,
