@@ -188,3 +188,26 @@ def load_embeddings(input_path: Path) -> list[AudioEmbedding]:
         embeddings.append(AudioEmbedding(track_id=str(tid), embedding=emb_vector))
     
     return embeddings
+
+def center_embeddings(embeddings: Sequence[AudioEmbedding]) -> list[AudioEmbedding]:
+    """
+    Center embeddings by subtracting mean vector.
+    
+    Reduces anisotropy by removing dominant direction.
+    Centered embeddings still support cosine similarity comparisons.
+    """
+    emb_matrix = np.vstack([e.embedding for e in embeddings])
+    
+    mean_vector = emb_matrix.mean(axis=0)
+    centered_matrix = emb_matrix - mean_vector
+    
+    norms = np.linalg.norm(centered_matrix, axis=1, keepdims=True)
+    normalized_matrix = centered_matrix / norms
+    
+    centered_embeddings: list[AudioEmbedding] = []
+    for emb, centered_vec in zip(embeddings, normalized_matrix):
+        centered_embeddings.append(
+            AudioEmbedding(track_id=emb.track_id, embedding=centered_vec)
+        )
+    
+    return centered_embeddings
