@@ -5,8 +5,7 @@ import itertools
 import math
 from typing import Literal, TypeAlias
 
-from .filter import ALL_GROUPS, TagGroup, TrackRow
-
+from .filter import TagGroup, Track
 
 TagCounts: TypeAlias = Counter[str]
 PairCounts: TypeAlias = Counter[tuple[str, str]]
@@ -44,16 +43,17 @@ class GroupMetrics:
 
 
 def compute_metrics(
-    rows: Sequence[TrackRow],
+    tracks: Sequence[Track],
     *,
-    groups: Sequence[TagGroup] = ALL_GROUPS,
+    groups: Sequence[TagGroup] = ("mood", "genre", "instrument"),
     top_k_pairs: int = 200,
     min_pair_count: int = 2,
 ) -> dict[TagGroup, GroupMetrics]:
+    """Compute tag distribution and co-occurrence metrics for each group."""
     out: dict[TagGroup, GroupMetrics] = {}
     for group in groups:
         out[group] = compute_group_metrics(
-            rows,
+            tracks,
             group=group,
             top_k_pairs=top_k_pairs,
             min_pair_count=min_pair_count,
@@ -62,28 +62,27 @@ def compute_metrics(
 
 
 def compute_group_metrics(
-    rows: Sequence[TrackRow],
+    tracks: Sequence[Track],
     *,
     group: TagGroup,
     top_k_pairs: int = 200,
     min_pair_count: int = 2,
 ) -> GroupMetrics:
-    n_tracks: int = int(len(rows))
+    """Compute metrics for single tag group."""
+    n_tracks = len(tracks)
     
-    # compute tag frequencies and distribution stats
-    tag_counts: TagCounts = count_tag_presence(rows, group=group)
-    tag_list: list[TagMetric] = tag_distribution(tag_counts=tag_counts, n_tracks=n_tracks)
-    values: list[int] = [m.presence_count for m in tag_list]
+    tag_counts = count_tag_presence(tracks, group=group)
+    tag_list = tag_distribution(tag_counts=tag_counts, n_tracks=n_tracks)
+    values = [m.presence_count for m in tag_list]
     
-    gini: float = gini_coefficient(values)
-    entropy: float = shannon_entropy(values)
-    entropy_norm: float = normalized_entropy(values)
-    imbalance_ratio: float = imbalance_max_min(values)
+    gini = gini_coefficient(values)
+    entropy = shannon_entropy(values)
+    entropy_norm = normalized_entropy(values)
+    imbalance_ratio = imbalance_max_min(values)
     
-    # compute tag co-occurrence patterns
-    pair_counts: PairCounts = count_pair_cooccurrence(rows, group=group)
+    pair_counts = count_pair_cooccurrence(tracks, group=group)
     
-    pairs_by_count: list[PairMetric] = cooccurring_pairs(
+    pairs_by_count = cooccurring_pairs(
         tag_counts=tag_counts,
         pair_counts=pair_counts,
         n_tracks=n_tracks,
@@ -92,7 +91,7 @@ def compute_group_metrics(
         sort_by="count",
     )
     
-    pairs_by_npmi: list[PairMetric] = cooccurring_pairs(
+    pairs_by_npmi = cooccurring_pairs(
         tag_counts=tag_counts,
         pair_counts=pair_counts,
         n_tracks=n_tracks,
@@ -104,7 +103,7 @@ def compute_group_metrics(
     return GroupMetrics(
         group=group,
         n_tracks=n_tracks,
-        n_unique_tags=int(len(tag_counts)),
+        n_unique_tags=len(tag_counts),
         gini=gini,
         entropy=entropy,
         entropy_norm=entropy_norm,
@@ -115,50 +114,42 @@ def compute_group_metrics(
     )
 
 
-def _raw_tags(row: TrackRow, group: TagGroup) -> Sequence[str]:
-    if group == "mood/theme":
-        return row["mood_tags"]
-    if group == "genre":
-        return row["genre_tags"]
-    return row["instrument_tags"]
-
-
-def _tag_tokens(row: TrackRow, group: TagGroup) -> list[str]:
-    out: list[str] = []
-    for t in _raw_tags(row, group):
-        if not isinstance(t, str):
-            continue
-        x: str = t.strip().lower()
-        if not x:
-            continue
-        out.append(x)
-    return out
-
-
-def count_tag_presence(rows: Sequence[TrackRow], *, group: TagGroup) -> TagCounts:
-    # count unique tag presence per track (not total occurrences)
+def count_tag_presence(
+    tracks: Sequence[Track],
+    *,
+    group: TagGroup,
+) -> TagCounts:
+    """Count unique tag presence per track (not total occurrences)."""
     counts: TagCounts = Counter()
-    for r in rows:
-        counts.update(set(_tag_tokens(r, group)))
+    for track in tracks:
+        counts.update(set(track.tags(group)))
     return counts
 
 
-def tag_distribution(*, tag_counts: Mapping[str, int], n_tracks: int) -> list[TagMetric]:
+def tag_distribution(
+    *,
+    tag_counts: Mapping[str, int],
+    n_tracks: int,
+) -> list[TagMetric]:
+    """Convert tag counts to metrics, sorted desc by count then asc by name."""
     out: list[TagMetric] = []
     for tag, c in tag_counts.items():
-        p_track: float = (float(c) / float(n_tracks)) if n_tracks > 0 else 0.0
-        out.append(TagMetric(tag=str(tag), presence_count=int(c), p_track=p_track))
+        p_track = float(c) / float(n_tracks) if n_tracks > 0 else 0.0
+        out.append(TagMetric(tag=tag, presence_count=c, p_track=p_track))
     
-    # sort by count desc, then name
     out.sort(key=lambda x: (-x.presence_count, x.tag))
     return out
 
 
-def count_pair_cooccurrence(rows: Sequence[TrackRow], *, group: TagGroup) -> PairCounts:
-    # count co-occurrence of tag pairs within same track
+def count_pair_cooccurrence(
+    tracks: Sequence[Track],
+    *,
+    group: TagGroup,
+) -> PairCounts:
+    """Count co-occurrence of tag pairs within same track."""
     counts: PairCounts = Counter()
-    for r in rows:
-        tags: list[str] = sorted(set(_tag_tokens(r, group)))
+    for track in tracks:
+        tags = sorted(set(track.tags(group)))
         if len(tags) < 2:
             continue
         for a, b in itertools.combinations(tags, 2):
@@ -175,42 +166,41 @@ def cooccurring_pairs(
     min_pair_count: int,
     sort_by: PairSort,
 ) -> list[PairMetric]:
+    """Compute pair metrics with NPMI scores."""
     if top_k <= 0:
         raise ValueError("top_k must be > 0")
     if min_pair_count <= 0:
         raise ValueError("min_pair_count must be > 0")
-    if n_tracks < 0:
-        raise ValueError("n_tracks must be >= 0")
+    
+    if n_tracks == 0:
+        return []
     
     out: list[PairMetric] = []
     
     for (a, b), c_xy in pair_counts.items():
-        if int(c_xy) < int(min_pair_count):
-            continue
-        if n_tracks == 0:
+        if c_xy < min_pair_count:
             continue
         
-        c_a: int = int(tag_counts.get(a, 0))
-        c_b: int = int(tag_counts.get(b, 0))
+        c_a = tag_counts.get(a, 0)
+        c_b = tag_counts.get(b, 0)
         
         if c_a <= 0 or c_b <= 0:
             continue
         
-        # compute probabilities and NPMI
-        p_x: float = float(c_a) / float(n_tracks)
-        p_y: float = float(c_b) / float(n_tracks)
-        p_xy: float = float(c_xy) / float(n_tracks)
+        p_x = float(c_a) / float(n_tracks)
+        p_y = float(c_b) / float(n_tracks)
+        p_xy = float(c_xy) / float(n_tracks)
         
-        npmi: float = normalized_pmi(p_x=p_x, p_y=p_y, p_xy=p_xy, eps=1e-12)
+        npmi = normalized_pmi(p_x=p_x, p_y=p_y, p_xy=p_xy, eps=1e-12)
         
         if math.isnan(npmi):
             continue
         
         out.append(
             PairMetric(
-                tag_a=str(a),
-                tag_b=str(b),
-                cooccur_count=int(c_xy),
+                tag_a=a,
+                tag_b=b,
+                cooccur_count=c_xy,
                 p_xy=p_xy,
                 npmi=npmi,
             )
@@ -224,17 +214,22 @@ def cooccurring_pairs(
     return out[:top_k]
 
 
-def normalized_pmi(*, p_x: float, p_y: float, p_xy: float, eps: float) -> float:
+def normalized_pmi(
+    *,
+    p_x: float,
+    p_y: float,
+    p_xy: float,
+    eps: float,
+) -> float:
     """
     Normalized pointwise mutual information (NPMI).
     
-    NPMI measures association strength between two tags, normalized to [-1, 1].
+    Measures association strength between two tags, normalized to [-1, 1].
     Returns NaN for invalid probability values.
     """
     if eps < 0.0:
         raise ValueError("eps must be >= 0")
     
-    # validate probabilities
     if p_x <= 0.0 or p_y <= 0.0 or p_xy <= 0.0:
         return math.nan
     if p_xy - p_x > eps or p_xy - p_y > eps:
@@ -242,82 +237,72 @@ def normalized_pmi(*, p_x: float, p_y: float, p_xy: float, eps: float) -> float:
     if p_x - 1.0 > eps or p_y - 1.0 > eps or p_xy - 1.0 > eps:
         return math.nan
     
-    denom: float = -math.log(p_xy)
+    denom = -math.log(p_xy)
     if denom <= 0.0:
         return math.nan
     
-    # PMI = log(P(X,Y) / (P(X) * P(Y)))
-    # NPMI = PMI / -log(P(X,Y))
-    pmi: float = math.log(p_xy / (p_x * p_y))
+    pmi = math.log(p_xy / (p_x * p_y))
     return pmi / denom
 
 
 def shannon_entropy(values: Sequence[int]) -> float:
-    # H(X) = -sum(p_i * log(p_i))
-    total: int = int(sum(int(v) for v in values))
+    """H(X) = -sum(p_i * log(p_i))."""
+    total = sum(values)
     if total <= 0:
         return 0.0
     
-    h: float = 0.0
+    h = 0.0
     for v in values:
-        c: int = int(v)
-        if c <= 0:
+        if v <= 0:
             continue
-        p: float = float(c) / float(total)
+        p = float(v) / float(total)
         h -= p * math.log(p)
     
     return h
 
 
 def normalized_entropy(values: Sequence[int]) -> float:
-    # normalize entropy by max possible entropy (log k)
-    k: int = int(len([v for v in values if int(v) > 0]))
+    """Normalize entropy by max possible entropy (log k)."""
+    k = len([v for v in values if v > 0])
     if k <= 1:
         return 0.0
     
-    h: float = shannon_entropy(values)
+    h = shannon_entropy(values)
     return h / math.log(float(k))
 
 
-def imbalance_max_min(values: Sequence[int]) -> float:
-    # ratio of most frequent to least frequent tag
-    pos: list[int] = [int(v) for v in values if int(v) > 0]
-    if len(pos) == 0:
-        return 0.0
-    
-    v_min: int = min(pos)
-    v_max: int = max(pos)
-    
-    if v_min <= 0:
-        return 0.0
-    
-    return float(v_max) / float(v_min)
-
-
 def gini_coefficient(values: Sequence[int]) -> float:
-    """
-    Gini coefficient measures inequality in tag distribution.
+    """Gini coefficient measures inequality in distribution."""
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
     
-    Returns value in [0, 1] where 0 = perfect equality, 1 = maximum inequality.
-    """
-    x: list[int] = [int(v) for v in values]
-    
-    if any(v < 0 for v in x):
-        raise ValueError("gini_coefficient values must be >= 0")
-    
-    n: int = int(len(x))
     if n == 0:
         return 0.0
     
-    total: int = int(sum(x))
+    total = sum(sorted_vals)
     if total == 0:
         return 0.0
     
-    x_sorted: list[int] = sorted(x)
+    cumsum = 0.0
+    gini_sum = 0.0
     
-    # compute weighted sum: sum(i * x_i) for i in 1..n
-    cum: int = 0
-    for i, v in enumerate(x_sorted, start=1):
-        cum += i * int(v)
+    for i, val in enumerate(sorted_vals):
+        cumsum += val
+        gini_sum += (2 * (i + 1) - n - 1) * val
     
-    return (2.0 * float(cum)) / (float(n) * float(total)) - (float(n) + 1.0) / float(n)
+    return gini_sum / (n * total)
+
+
+def imbalance_max_min(values: Sequence[int]) -> float:
+    """Ratio of max to min tag count."""
+    positive_vals = [v for v in values if v > 0]
+    if len(positive_vals) == 0:
+        return 0.0
+    
+    max_val = max(positive_vals)
+    min_val = min(positive_vals)
+    
+    if min_val == 0:
+        return float("inf")
+    
+    return float(max_val) / float(min_val)

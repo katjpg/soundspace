@@ -36,38 +36,40 @@ class DatasetConfig:
 
 
 def load_config(config_path: Path) -> DatasetConfig:
-    raw: dict[str, Any] = _load_yaml(config_path)
-    paths: PathConfig = _load_paths(config_path, raw)
-    datasets: dict[str, Dataset] = _load_datasets(paths, raw)
+    """Load dataset config from YAML file."""
+    raw = _load_yaml(config_path)
+    paths = _load_paths(config_path, raw)
+    datasets = _load_datasets(paths, raw)
     return DatasetConfig(paths=paths, datasets=datasets)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     try:
-        content: str = path.read_text(encoding="utf-8")
-        data: Any = yaml.safe_load(content)
+        content = path.read_text(encoding="utf-8")
+        data = yaml.safe_load(content)
     except (OSError, yaml.YAMLError) as e:
         raise ValueError(f"failed to load {path}: {e}") from e
     
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML dict")
     
-    _require_key(data, "paths", f"config file {path}")
-    _require_key(data, "datasets", f"config file {path}")
+    if "paths" not in data:
+        raise ValueError(f"{path} missing 'paths' section")
+    if "datasets" not in data:
+        raise ValueError(f"{path} missing 'datasets' section")
     
     return data
 
 
 def _load_paths(config_path: Path, raw: dict[str, Any]) -> PathConfig:
-    config_dir: Path = config_path.resolve().parent
-    paths_raw: dict[str, Any] = raw["paths"]
+    config_dir = config_path.resolve().parent
+    paths_raw = raw["paths"]
     
-    _require_key(paths_raw, "project_root", "paths section")
-    _require_key(paths_raw, "dataset_root", "paths section")
-    _require_key(paths_raw, "models_root", "paths section")
-    _require_key(paths_raw, "output_root", "paths section")
+    for key in ("project_root", "dataset_root", "models_root", "output_root"):
+        if key not in paths_raw:
+            raise ValueError(f"paths section missing '{key}'")
     
-    project: Path = (config_dir / str(paths_raw["project_root"])).resolve()
+    project = (config_dir / str(paths_raw["project_root"])).resolve()
     
     return PathConfig(
         project_root=project,
@@ -77,47 +79,52 @@ def _load_paths(config_path: Path, raw: dict[str, Any]) -> PathConfig:
     )
 
 
-def _load_datasets(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Dataset]:
-    datasets: dict[str, Dataset] = {}
-    datasets_raw: dict[str, Any] = raw["datasets"]
+def _load_datasets(
+    paths: PathConfig,
+    raw: dict[str, Any],
+) -> dict[str, Dataset]:
+    datasets_raw = raw["datasets"]
     
     if not isinstance(datasets_raw, dict):
         raise ValueError("datasets section must be a dict")
     
+    datasets: dict[str, Dataset] = {}
+    
     for name, spec in datasets_raw.items():
         if not isinstance(spec, dict):
-            raise ValueError(f"dataset '{name}' spec must be a dict, got {type(spec)}")
+            raise ValueError(f"dataset '{name}' spec must be a dict")
         
-        _require_key(spec, "root", f"dataset '{name}'")
+        if "root" not in spec:
+            raise ValueError(f"dataset '{name}' missing 'root'")
         
-        root: Path = paths.dataset_root / str(spec["root"])
-        
-        audio_cfg: AudioConfig = _load_audio(root, spec.get("audio", {}), name)
-        metadata: dict[str, Any] = _load_metadata(root, spec.get("metadata", {}))
-        task: dict[str, Any] = spec.get("task", {})
-        cv: dict[str, Any] | None = spec.get("cv")
+        root = paths.dataset_root / str(spec["root"])
+        audio_cfg = _load_audio(root, spec.get("audio", {}), name)
+        metadata = _load_metadata(root, spec.get("metadata", {}))
         
         datasets[name] = Dataset(
             name=name,
             root=root,
             audio=audio_cfg,
             metadata=metadata,
-            task=task,
-            cv=cv,
+            task=spec.get("task", {}),
+            cv=spec.get("cv"),
         )
     
     return datasets
 
 
-def _load_audio(root: Path, raw: dict[str, Any], dataset_name: str) -> AudioConfig:
-    if not raw:
+def _load_audio(
+    root: Path,
+    raw: dict[str, Any],
+    dataset_name: str,
+) -> AudioConfig:
+    if not raw or not isinstance(raw, dict):
         raise ValueError(f"dataset '{dataset_name}' missing audio config")
     
-    if not isinstance(raw, dict):
-        raise ValueError(f"dataset '{dataset_name}' audio config must be a dict")
-    
-    _require_key(raw, "dir", f"dataset '{dataset_name}' audio")
-    _require_key(raw, "path", f"dataset '{dataset_name}' audio")
+    if "dir" not in raw:
+        raise ValueError(f"dataset '{dataset_name}' audio missing 'dir'")
+    if "path" not in raw:
+        raise ValueError(f"dataset '{dataset_name}' audio missing 'path'")
     
     return AudioConfig(
         dir=root / str(raw["dir"]),
@@ -126,7 +133,7 @@ def _load_audio(root: Path, raw: dict[str, Any], dataset_name: str) -> AudioConf
 
 
 def _load_metadata(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
-    # recursively resolve paths in nested metadata dicts/lists
+    """Recursively resolve paths in nested metadata dicts/lists."""
     result: dict[str, Any] = {}
     
     for key, val in raw.items():
@@ -143,19 +150,9 @@ def _load_metadata(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def _resolve_path_list(root: Path, items: list[Any]) -> list[Any]:
-    return [
-        root / str(item) if isinstance(item, str) else item
-        for item in items
-    ]
+    return [root / str(item) if isinstance(item, str) else item for item in items]
 
 
 def _is_path_key(key: str) -> bool:
-    # keys ending w/ _file, _dir, _path or named 'path'/'files' are treated as paths
-    path_suffixes: tuple[str, ...] = ("_file", "_dir", "_path")
-    return key.endswith(path_suffixes) or key in {"path", "files"}
-
-
-def _require_key(d: dict[str, Any], key: str, context: str) -> Any:
-    if key not in d:
-        raise ValueError(f"{context} missing required key '{key}'")
-    return d[key]
+    """Keys ending w/ _file, _dir, _path or named 'path'/'files' are treated as paths."""
+    return key.endswith(("_file", "_dir", "_path")) or key in {"path", "files"}

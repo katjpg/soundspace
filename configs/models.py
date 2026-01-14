@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
 import yaml
 
 
@@ -38,38 +39,40 @@ class ModelConfig:
 
 
 def load_config(config_path: Path) -> ModelConfig:
-    raw: dict[str, Any] = _load_yaml(config_path)
-    paths: PathConfig = _load_paths(config_path, raw)
-    models: dict[str, Model] = _load_models(paths, raw)
+    """Load model config from YAML file."""
+    raw = _load_yaml(config_path)
+    paths = _load_paths(config_path, raw)
+    models = _load_models(paths, raw)
     return ModelConfig(paths=paths, models=models)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     try:
-        content: str = path.read_text(encoding="utf-8")
-        data: Any = yaml.safe_load(content)
+        content = path.read_text(encoding="utf-8")
+        data = yaml.safe_load(content)
     except (OSError, yaml.YAMLError) as e:
         raise ValueError(f"failed to load {path}: {e}") from e
     
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML dict")
     
-    _require_key(data, "paths", f"config file {path}")
-    _require_key(data, "models", f"config file {path}")
+    if "paths" not in data:
+        raise ValueError(f"{path} missing 'paths' section")
+    if "models" not in data:
+        raise ValueError(f"{path} missing 'models' section")
     
     return data
 
 
 def _load_paths(config_path: Path, raw: dict[str, Any]) -> PathConfig:
-    config_dir: Path = config_path.resolve().parent
-    paths_raw: dict[str, Any] = raw["paths"]
+    config_dir = config_path.resolve().parent
+    paths_raw = raw["paths"]
     
-    _require_key(paths_raw, "project_root", "paths section")
-    _require_key(paths_raw, "dataset_root", "paths section")
-    _require_key(paths_raw, "models_root", "paths section")
-    _require_key(paths_raw, "output_root", "paths section")
+    for key in ("project_root", "dataset_root", "models_root", "output_root"):
+        if key not in paths_raw:
+            raise ValueError(f"paths section missing '{key}'")
     
-    project: Path = (config_dir / str(paths_raw["project_root"])).resolve()
+    project = (config_dir / str(paths_raw["project_root"])).resolve()
     
     return PathConfig(
         project_root=project,
@@ -80,28 +83,25 @@ def _load_paths(config_path: Path, raw: dict[str, Any]) -> PathConfig:
 
 
 def _load_models(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Model]:
-    models: dict[str, Model] = {}
-    models_raw: dict[str, Any] = raw["models"]
+    models_raw = raw["models"]
     
     if not isinstance(models_raw, dict):
         raise ValueError("models section must be a dict")
     
+    models: dict[str, Model] = {}
+    
     for name, spec in models_raw.items():
         if not isinstance(spec, dict):
-            raise ValueError(f"model '{name}' spec must be a dict, got {type(spec)}")
+            raise ValueError(f"model '{name}' spec must be a dict")
         
-        _require_key(spec, "provider", f"model '{name}'")
+        if "provider" not in spec:
+            raise ValueError(f"model '{name}' missing 'provider'")
         
-        provider: str = str(spec["provider"])
-        provider_dir: Path = paths.models_root / provider
+        provider = str(spec["provider"])
+        provider_dir = paths.models_root / provider
         
-        encoder: ModelSpec | None = _load_spec(
-            provider_dir, spec.get("encoder"), name, "encoder"
-        )
-        
-        predictor: ModelSpec | None = _load_spec(
-            provider_dir, spec.get("predictor"), name, "predictor"
-        )
+        encoder = _load_spec(provider_dir, spec.get("encoder"), name, "encoder")
+        predictor = _load_spec(provider_dir, spec.get("predictor"), name, "predictor")
         
         models[name] = Model(
             name=name,
@@ -126,33 +126,19 @@ def _load_spec(
         return None
     
     if not isinstance(raw, dict):
-        raise ValueError(
-            f"model '{model_name}' {spec_type} must be a dict, got {type(raw)}"
-        )
+        raise ValueError(f"model '{model_name}' {spec_type} must be a dict")
     
-    _require_key(raw, "model_id", f"model '{model_name}' {spec_type}")
-    _require_key(raw, "output", f"model '{model_name}' {spec_type}")
+    if "model_id" not in raw:
+        raise ValueError(f"model '{model_name}' {spec_type} missing 'model_id'")
+    if "output" not in raw:
+        raise ValueError(f"model '{model_name}' {spec_type} missing 'output'")
     
-    model_id: str = str(raw["model_id"])
-    output: str = str(raw["output"])
-    
-    weights: Path | None = None
-    if "weights" in raw:
-        weights = base_dir / str(raw["weights"])
-    
-    metadata: Path | None = None
-    if "metadata" in raw:
-        metadata = base_dir / str(raw["metadata"])
+    weights = base_dir / str(raw["weights"]) if "weights" in raw else None
+    metadata = base_dir / str(raw["metadata"]) if "metadata" in raw else None
     
     return ModelSpec(
-        model_id=model_id,
-        output=output,
+        model_id=str(raw["model_id"]),
+        output=str(raw["output"]),
         weights=weights,
         metadata=metadata,
     )
-
-
-def _require_key(d: dict[str, Any], key: str, context: str) -> Any:
-    if key not in d:
-        raise ValueError(f"{context} missing required key '{key}'")
-    return d[key]

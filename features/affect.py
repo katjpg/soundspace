@@ -1,13 +1,15 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
+import librosa
 import numpy as np
-import numpy.typing as npt
 
 from models.essentia import AffectPredictor
 
-
-FloatArray = npt.NDArray[np.float32]
+VA_SCALE_MIN = 1.0
+VA_SCALE_MAX = 9.0
+VA_SCALE_CENTER = 5.0
+VA_SCALE_RANGE = 4.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,29 +18,24 @@ class AffectFeatures:
     arousal_1_9: float
     valence_m1_1: float
     arousal_m1_1: float
-    
-    def as_dict(self) -> dict[str, float]:
-        return {k: float(v) for k, v in asdict(self).items()}
 
 
 def extract_affect(audio_path: Path, model: AffectPredictor) -> AffectFeatures:
-    import librosa
-    
-    y, sr_loaded = librosa.load(audio_path, sr=model.sample_rate, mono=True)
-    return compute_affect(y=y, sr=int(sr_loaded), model=model)
+    """Extract valence-arousal features from audio file."""
+    y, sr = librosa.load(str(audio_path), sr=model.sample_rate, mono=True)
+    return compute_affect(y, int(sr), model)
 
 
-def compute_affect(*, y: FloatArray, sr: int, model: AffectPredictor) -> AffectFeatures:
+def compute_affect(y: np.ndarray, sr: int, model: AffectPredictor) -> AffectFeatures:
+    """Compute valence-arousal from audio waveform using affect model."""
     if sr != model.sample_rate:
         raise ValueError(f"sample rate mismatch: expected {model.sample_rate}, got {sr}")
     
-    y_f32 = np.asarray(y, dtype=np.float32)
+    y = np.asarray(y, dtype=np.float32)
     
-    # embedding extraction
-    emb_raw = model.emb_predictor(y_f32)
+    emb_raw = model.emb_predictor(y)
     emb_pooled = _pool_embedding(emb_raw)
     
-    # valence-arousal prediction (1-9 scale)
     va_19 = model.va_predictor(emb_pooled)
     va_19 = np.asarray(va_19, dtype=np.float32)
     
@@ -48,9 +45,8 @@ def compute_affect(*, y: FloatArray, sr: int, model: AffectPredictor) -> AffectF
     valence_19 = float(va_19[0, 0])
     arousal_19 = float(va_19[0, 1])
     
-    # normalize to [-1, 1]
-    valence_m11 = _to_m1_1(valence_19)
-    arousal_m11 = _to_m1_1(arousal_19)
+    valence_m11 = _scale_to_m1_1(valence_19)
+    arousal_m11 = _scale_to_m1_1(arousal_19)
     
     return AffectFeatures(
         valence_1_9=valence_19,
@@ -60,18 +56,19 @@ def compute_affect(*, y: FloatArray, sr: int, model: AffectPredictor) -> AffectF
     )
 
 
-def _pool_embedding(emb_raw: FloatArray) -> FloatArray:
-    # handle both 1D and 2D embeddings (temporal dimension)
+def _pool_embedding(emb_raw: np.ndarray) -> np.ndarray:
+    """Pool temporal embeddings to single vector."""
     emb = np.asarray(emb_raw, dtype=np.float32)
     
     if emb.ndim == 1:
         return emb.reshape(1, -1)
+    
     if emb.ndim == 2:
         return emb.mean(axis=0, keepdims=True).astype(np.float32)
     
     raise ValueError(f"unexpected embedding shape: {emb.shape}")
 
 
-def _to_m1_1(x_19: float) -> float:
-    # convert 1-9 scale to [-1, 1]
-    return (x_19 - 5.0) / 4.0
+def _scale_to_m1_1(x_19: float) -> float:
+    """Convert 1-9 scale to [-1, 1] scale."""
+    return (x_19 - VA_SCALE_CENTER) / VA_SCALE_RANGE

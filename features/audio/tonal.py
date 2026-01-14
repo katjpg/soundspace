@@ -1,15 +1,14 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 import librosa
 import numpy as np
 
-from .io import load_audio
+from .io import SAMPLE_RATE, load_audio
 
-
-_MAJOR_DEGREES: tuple[int, ...] = (0, 2, 4, 5, 7, 9, 11)
-_MINOR_DEGREES: tuple[int, ...] = (0, 2, 3, 5, 7, 8, 10)
-_EPS: float = 1e-12
+MAJOR_DEGREES = (0, 2, 4, 5, 7, 9, 11)
+MINOR_DEGREES = (0, 2, 3, 5, 7, 8, 10)
+EPS = 1e-12
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,23 +16,21 @@ class TonalFeatures:
     chroma_entropy: float
     major_alignment: float
     minor_alignment: float
-    
-    def as_dict(self) -> dict[str, float]:
-        return {k: float(v) for k, v in asdict(self).items()}
 
 
-def extract_tonal(audio_path: Path, *, sr: int = 22050) -> TonalFeatures:
-    y, sr_loaded = load_audio(audio_path, sr=sr)
-    return compute_tonal(y=y, sr=sr_loaded)
+def extract_tonal(audio_path: Path, *, sr: int = SAMPLE_RATE) -> TonalFeatures:
+    """Extract tonal features from audio file."""
+    y, sr = load_audio(audio_path, sr=sr)
+    return compute_tonal(y, sr)
 
 
-def compute_tonal(*, y: np.ndarray, sr: int) -> TonalFeatures:
-    chroma = _compute_chroma(y=y, sr=sr)
+def compute_tonal(y: np.ndarray, sr: int) -> TonalFeatures:
+    """Compute tonal features from audio waveform."""
+    chroma = _compute_chroma(y, sr)
     chroma_mean = _mean_chroma(chroma)
-    
     chroma_entropy = _entropy(chroma_mean)
-    major_alignment = _scale_alignment(chroma_mean, degrees=_MAJOR_DEGREES)
-    minor_alignment = _scale_alignment(chroma_mean, degrees=_MINOR_DEGREES)
+    major_alignment = _scale_alignment(chroma_mean, MAJOR_DEGREES)
+    minor_alignment = _scale_alignment(chroma_mean, MINOR_DEGREES)
     
     return TonalFeatures(
         chroma_entropy=chroma_entropy,
@@ -42,14 +39,15 @@ def compute_tonal(*, y: np.ndarray, sr: int) -> TonalFeatures:
     )
 
 
-def _compute_chroma(*, y: np.ndarray, sr: int) -> np.ndarray:
-    chroma = librosa.feature.chroma_stft(y=y, sr=int(sr))
+def _compute_chroma(y: np.ndarray, sr: int) -> np.ndarray:
+    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
     return np.asarray(chroma, dtype=np.float32)
 
 
 def _mean_chroma(chroma: np.ndarray) -> np.ndarray:
+    """Average chroma over time, returns 12-dim vector."""
     if chroma.size == 0:
-        return np.zeros((12,), dtype=np.float32)
+        return np.zeros(12, dtype=np.float32)
     
     mean_vec = np.asarray(np.mean(chroma, axis=1), dtype=np.float32).reshape(-1)
     
@@ -60,6 +58,7 @@ def _mean_chroma(chroma: np.ndarray) -> np.ndarray:
 
 
 def _entropy(p: np.ndarray) -> float:
+    """Shannon entropy of distribution."""
     x = np.asarray(p, dtype=np.float64)
     total = float(np.sum(x))
     
@@ -67,12 +66,13 @@ def _entropy(p: np.ndarray) -> float:
         return 0.0
     
     q = x / total
-    q = np.clip(q, _EPS, 1.0)
+    q = np.clip(q, EPS, 1.0)
     
     return float(-np.sum(q * np.log2(q)))
 
 
-def _scale_alignment(chroma_mean: np.ndarray, *, degrees: tuple[int, ...]) -> float:
+def _scale_alignment(chroma_mean: np.ndarray, degrees: tuple[int, ...]) -> float:
+    """Fraction of energy aligned with scale degrees."""
     x = np.asarray(chroma_mean, dtype=np.float64)
     total = float(np.sum(x))
     
