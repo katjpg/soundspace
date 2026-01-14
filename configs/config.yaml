@@ -17,23 +17,25 @@ models:
       weights: deam-msd-musicnn-2.pb
       metadata: deam-msd-musicnn-2.json
       output: model/Identity
+  
+  clap_music:
+    provider: huggingface
+    model_id: laion/larger_clap_music
+    device: null
+    dtype: float32
 
 datasets:
   mtg_jamendo:
     root: mtg-jamendo-dataset
-
     audio:
       dir: downloads
       path: "^[0-9]{2}/[0-9]+\\.mp3$"
-
     metadata:
       path: data/autotagging.tsv
-
     cv:
       n_folds: [0, 1, 2, 3, 4]
       fold: 0
       fold_dir: data/splits/split-{fold}
-
     task:
       name: autotagging_moodtheme
       options:
@@ -48,11 +50,9 @@ datasets:
 
   deam:
     root: deam
-
     audio:
       dir: audio
       path: "^[0-9]+\\.mp3$"
-
     metadata:
       features_dir: features
       annotations_dir: annotations
@@ -71,7 +71,6 @@ datasets:
         files:
           - per-rater/song-level/static_annotations_songs_1_2000.csv
           - per-rater/song-level/static_annotations_songs_2000_2058.csv
-
     task:
       name: dynamic_averaged
       options:
@@ -79,8 +78,8 @@ datasets:
         - song_level_averaged
         - dynamic_per_rater
         - song_level_per_rater
-      target:
-        name: valence_arousal
-        fields:
-          - valence
-          - arousal
+    target:
+      name: valence_arousal
+      fields:
+        - valence
+        - arousal
