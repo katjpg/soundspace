@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 import yaml
 
 
@@ -25,6 +24,9 @@ class ModelSpec:
 class Model:
     name: str
     provider: str
+    model_id: str | None = None
+    device: str | None = None
+    dtype: str = "float32"
     encoder: ModelSpec | None = None
     predictor: ModelSpec | None = None
 
@@ -96,6 +98,7 @@ def _load_models(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Model]:
         encoder: ModelSpec | None = _load_spec(
             provider_dir, spec.get("encoder"), name, "encoder"
         )
+        
         predictor: ModelSpec | None = _load_spec(
             provider_dir, spec.get("predictor"), name, "predictor"
         )
@@ -103,6 +106,9 @@ def _load_models(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Model]:
         models[name] = Model(
             name=name,
             provider=provider,
+            model_id=spec.get("model_id"),
+            device=spec.get("device"),
+            dtype=spec.get("dtype", "float32"),
             encoder=encoder,
             predictor=predictor,
         )
