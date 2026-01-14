@@ -27,7 +27,7 @@ datasets:
       path: "^[0-9]{2}/[0-9]+\\.mp3$"
 
     metadata:
-      path: data/autotagging.tsv
+      path: data/autotagging_moodtheme.tsv
 
     cv:
       n_folds: [0, 1, 2, 3, 4]
@@ -35,7 +35,7 @@ datasets:
       fold_dir: data/splits/split-{fold}
 
     task:
-      name: autotagging
+      name: autotagging_moodtheme
       options:
         - autotagging
         - autotagging_genre
