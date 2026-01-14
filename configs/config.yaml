@@ -1,38 +1,86 @@
-data_root: "../../data"
+paths:
+  project_root: ..
+  dataset_root: ../data
+  models_root: models
+  output_root: dataset/output
 
 models:
-  root: "models"
-  essentia:
-    cache_dir: "essentia"
-    inference:
-      sample_rate: 16000
-      embedding_output: "model/dense/BiasAdd"
-      valence_arousal_output: "model/Identity"
-    models:
-      msd_musicnn_v1:
-        pb: "msd-musicnn-1.pb"
-        json: "msd-musicnn-1.json"
-        url_pb: "https://essentia.upf.edu/models/autotagging/msd/msd-musicnn-1.pb"
-        url_json: "https://essentia.upf.edu/models/autotagging/msd/msd-musicnn-1.json"
-      deam_v2:
-        pb: "deam-msd-musicnn-2.pb"
-        json: "deam-msd-musicnn-2.json"
-        url_pb: "https://essentia.upf.edu/models/classification-heads/deam/deam-msd-musicnn-2.pb"
-        url_json: "https://essentia.upf.edu/models/classification-heads/deam/deam-msd-musicnn-2.json"
+  musicnn:
+    provider: essentia
+    encoder:
+      model_id: msd-musicnn
+      weights: msd-musicnn-1.pb
+      metadata: msd-musicnn-1.json
+      output: model/dense/BiasAdd
+    predictor:
+      model_id: deam-msd-musicnn
+      weights: deam-msd-musicnn-2.pb
+      metadata: deam-msd-musicnn-2.json
+      output: model/Identity
 
 datasets:
   mtg_jamendo:
-    root: "mtg-jamendo-dataset"
-    metadata_file: "data/autotagging.tsv"
-    splits_dir: "data/splits"
-    audio_root: "downloads"
+    root: mtg-jamendo-dataset
+
+    audio:
+      dir: downloads
+      path: "^[0-9]{2}/[0-9]+\\.mp3$"
+
+    metadata:
+      path: data/autotagging.tsv
+
+    cv:
+      n_folds: [0, 1, 2, 3, 4]
+      fold: 0
+      fold_dir: data/splits/split-{fold}
+
+    task:
+      name: autotagging
+      options:
+        - autotagging
+        - autotagging_genre
+        - autotagging_instrument
+        - autotagging_moodtheme
+        - autotagging_top50tags
+      train_file: "{task}-train.tsv"
+      val_file: "{task}-validation.tsv"
+      test_file: "{task}-test.tsv"
 
   deam:
-    root: "deam"
-    audio_dir: "audio"
-    features_dir: "features"
-    annotations:
-      averaged_dynamic_dir: "annotations/averaged/dynamic"
-      averaged_song_level_dir: "annotations/averaged/song-level"
-      per_rater_dynamic_dir: "annotations/per-rater/dynamic"
-      per_rater_song_level_dir: "annotations/per-rater/song-level"
+    root: deam
+
+    audio:
+      dir: audio
+      path: "^[0-9]+\\.mp3$"
+
+    metadata:
+      features_dir: features
+      annotations_dir: annotations
+      dynamic_averaged:
+        arousal_file: averaged/dynamic/arousal.csv
+        valence_file: averaged/dynamic/valence.csv
+      song_level_averaged:
+        files:
+          - averaged/song-level/static_annotations_averaged_songs_1_2000.csv
+          - averaged/song-level/static_annotations_averaged_songs_2000_2058.csv
+      dynamic_per_rater:
+        arousal_dir: per-rater/dynamic/arousal
+        valence_dir: per-rater/dynamic/valence
+        file_pattern: "{track_id}.csv"
+      song_level_per_rater:
+        files:
+          - per-rater/song-level/static_annotations_songs_1_2000.csv
+          - per-rater/song-level/static_annotations_songs_2000_2058.csv
+
+    task:
+      name: dynamic_averaged
+      options:
+        - dynamic_averaged
+        - song_level_averaged
+        - dynamic_per_rater
+        - song_level_per_rater
+      target:
+        name: valence_arousal
+        fields:
+          - valence
+          - arousal
