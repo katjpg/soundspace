@@ -1,7 +1,8 @@
 import csv
+import importlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 from configs.dataset import DatasetConfig
 from dataset.filter import Track, clean_tags
@@ -12,7 +13,7 @@ SplitName: TypeAlias = Literal["train", "val", "test"]
 
 @dataclass(frozen=True, slots=True)
 class MergeMeta:
-    duration_s: float
+    duration_s: float | None
     mood_tags: tuple[str, ...]
     genre_tags: tuple[str, ...]
     theme_tags: tuple[str, ...]
@@ -34,8 +35,9 @@ def load_merge_tracks(config: DatasetConfig, *, split: SplitName = "train") -> l
 
     meta_map = _read_merge_metadata(metadata_file)
     av_map = _read_merge_av_values(av_values_file)
-
     split_rows = _read_split_rows(split_file)
+
+    duration_cache: dict[Path, float] = {}
     tracks: list[Track] = []
 
     for song_id, quadrant in split_rows:
@@ -49,11 +51,24 @@ def load_merge_tracks(config: DatasetConfig, *, split: SplitName = "train") -> l
 
         audio_path = ds.audio.dir / quadrant / f"{song_id}.mp3"
 
+        duration_s = meta.duration_s
+        if duration_s is None or duration_s <= 0.0:
+            cached = duration_cache.get(audio_path)
+            if cached is None:
+                computed = _duration_from_audio(audio_path)
+                if computed is not None and computed > 0.0:
+                    duration_cache[audio_path] = computed
+                    cached = computed
+            duration_s = cached
+
+        if duration_s is None:
+            duration_s = 0.0
+
         tracks.append(
             Track(
                 track_id=song_id,
                 audio_path=audio_path,
-                duration_s=meta.duration_s,
+                duration_s=duration_s,
                 quadrant=quadrant,
                 arousal=arousal,
                 valence=valence,
@@ -94,7 +109,8 @@ def _read_merge_metadata(path: Path) -> dict[str, MergeMeta]:
         for row in reader:
             song_id = _get(row, "Song")
             quadrant = _get_optional(row, "Quadrant")
-            duration_s = _to_float(_get_optional(row, "Duration"), default=0.0)
+            duration_s = _to_optional_float(_get_optional(row, "Duration"))
+
             moods_all = _split_csv_list(_get_optional(row, "MoodsAll"))
             genres = _split_csv_list(_get_optional(row, "Genres"))
             themes = _split_csv_list(_get_optional(row, "Themes"))
@@ -135,6 +151,87 @@ def _read_split_rows(path: Path) -> list[tuple[str, str]]:
     return rows
 
 
+def _duration_from_audio(path: Path) -> float | None:
+    if not path.exists():
+        return None
+
+    duration = _duration_from_librosa(path)
+    if duration is not None and duration > 0.0:
+        return duration
+
+    duration = _duration_from_essentia_metadata(path)
+    if duration is not None and duration > 0.0:
+        return duration
+
+    duration = _duration_from_essentia_decode(path)
+    if duration is not None and duration > 0.0:
+        return duration
+
+    return None
+
+
+def _duration_from_librosa(path: Path) -> float | None:
+    try:
+        import librosa
+    except Exception:
+        return None
+
+    try:
+        val = float(librosa.get_duration(path=str(path)))
+        return val if val > 0.0 else None
+    except Exception:
+        return None
+
+
+def _essentia_standard() -> Any | None:
+    try:
+        return importlib.import_module("essentia.standard")
+    except Exception:
+        return None
+
+
+def _duration_from_essentia_metadata(path: Path) -> float | None:
+    es = _essentia_standard()
+    if es is None:
+        return None
+
+    reader_ctor = getattr(es, "MetadataReader", None)
+    if reader_ctor is None:
+        return None
+
+    try:
+        meta = reader_ctor(filename=str(path))()
+        if not isinstance(meta, (list, tuple)) or len(meta) < 9:
+            return None
+        val = meta[8]
+        if val is None:
+            return None
+        out = float(val)
+        return out if out > 0.0 else None
+    except Exception:
+        return None
+
+
+def _duration_from_essentia_decode(path: Path) -> float | None:
+    es = _essentia_standard()
+    if es is None:
+        return None
+
+    loader_ctor = getattr(es, "MonoLoader", None)
+    if loader_ctor is None:
+        return None
+
+    try:
+        sample_rate = 44100
+        audio = loader_ctor(filename=str(path), sampleRate=sample_rate)()
+        n = int(getattr(audio, "shape", (0,))[0])
+        if n <= 0:
+            return None
+        return float(n) / float(sample_rate)
+    except Exception:
+        return None
+
+
 def _split_csv_list(blob: str | None) -> list[str]:
     if blob is None:
         return []
@@ -144,16 +241,16 @@ def _split_csv_list(blob: str | None) -> list[str]:
     return [part.strip() for part in s.split(",") if part.strip()]
 
 
-def _to_float(val: str | None, *, default: float) -> float:
+def _to_optional_float(val: str | None) -> float | None:
     if val is None:
-        return default
+        return None
     s = val.strip()
     if not s:
-        return default
+        return None
     try:
         return float(s)
     except ValueError:
-        return default
+        return None
 
 
 def _get(row: dict[str, str | None], key: str) -> str:
