@@ -17,7 +17,7 @@ models:
       weights: deam-msd-musicnn-2.pb
       metadata: deam-msd-musicnn-2.json
       output: model/Identity
-  
+
   clap_music:
     provider: huggingface
     model_id: laion/larger_clap_music
@@ -25,6 +25,20 @@ models:
     dtype: float32
 
 datasets:
+  merge:
+    root: merge-balanced
+    audio:
+      dir: audio
+      path: "^Q[1-4]/[^/]+\\.mp3$"
+    metadata:
+      metadata_file: merge_audio_balanced_metadata.csv
+      av_values_file: merge_audio_balanced_av_values.csv
+      split:
+        name: tvt_70_15_15
+        train_file: tvt_dataframes/tvt_70_15_15/tvt_70_15_15_train_audio_balanced.csv
+        val_file: tvt_dataframes/tvt_70_15_15/tvt_70_15_15_validate_audio_balanced.csv
+        test_file: tvt_dataframes/tvt_70_15_15/tvt_70_15_15_test_audio_balanced.csv
+
   mtg_jamendo:
     root: mtg-jamendo-dataset
     audio:
@@ -32,21 +46,6 @@ datasets:
       path: "^[0-9]{2}/[0-9]+\\.mp3$"
     metadata:
       path: data/autotagging.tsv
-    cv:
-      n_folds: [0, 1, 2, 3, 4]
-      fold: 0
-      fold_dir: data/splits/split-{fold}
-    task:
-      name: autotagging_moodtheme
-      options:
-        - autotagging
-        - autotagging_genre
-        - autotagging_instrument
-        - autotagging_moodtheme
-        - autotagging_top50tags
-      train_file: "{task}-train.tsv"
-      val_file: "{task}-validation.tsv"
-      test_file: "{task}-test.tsv"
 
   deam:
     root: deam
@@ -71,15 +70,3 @@ datasets:
         files:
           - per-rater/song-level/static_annotations_songs_1_2000.csv
           - per-rater/song-level/static_annotations_songs_2000_2058.csv
-    task:
-      name: dynamic_averaged
-      options:
-        - dynamic_averaged
-        - song_level_averaged
-        - dynamic_per_rater
-        - song_level_per_rater
-    target:
-      name: valence_arousal
-      fields:
-        - valence
-        - arousal
