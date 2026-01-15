@@ -30,24 +30,27 @@ def compute_affect(y: np.ndarray, sr: int, model: AffectPredictor) -> AffectFeat
     """Compute valence-arousal from audio waveform using affect model."""
     if sr != model.sample_rate:
         raise ValueError(f"sample rate mismatch: expected {model.sample_rate}, got {sr}")
-    
+
     y = np.asarray(y, dtype=np.float32)
-    
+
     emb_raw = model.emb_predictor(y)
     emb_pooled = _pool_embedding(emb_raw)
-    
+
     va_19 = model.va_predictor(emb_pooled)
     va_19 = np.asarray(va_19, dtype=np.float32)
-    
+
     if va_19.ndim != 2 or va_19.shape[1] < 2:
         raise ValueError(f"unexpected VA output shape: {va_19.shape}")
-    
+
+    if va_19.shape[0] > 1:
+        va_19 = va_19.mean(axis=0, keepdims=True).astype(np.float32)
+
     valence_19 = float(va_19[0, 0])
     arousal_19 = float(va_19[0, 1])
-    
+
     valence_m11 = _scale_to_m1_1(valence_19)
     arousal_m11 = _scale_to_m1_1(arousal_19)
-    
+
     return AffectFeatures(
         valence_1_9=valence_19,
         arousal_1_9=arousal_19,
@@ -57,16 +60,17 @@ def compute_affect(y: np.ndarray, sr: int, model: AffectPredictor) -> AffectFeat
 
 
 def _pool_embedding(emb_raw: np.ndarray) -> np.ndarray:
-    """Pool temporal embeddings to single vector."""
+    """Prepare embedding for VA predictor (no temporal pooling)."""
     emb = np.asarray(emb_raw, dtype=np.float32)
-    
+
     if emb.ndim == 1:
         return emb.reshape(1, -1)
-    
+
     if emb.ndim == 2:
-        return emb.mean(axis=0, keepdims=True).astype(np.float32)
-    
+        return emb.astype(np.float32)
+
     raise ValueError(f"unexpected embedding shape: {emb.shape}")
+
 
 
 def _scale_to_m1_1(x_19: float) -> float:
