@@ -44,4 +44,5 @@ dev = [
     "jupyter-bokeh>=4.0.5",
     "notebook>=7.5.0",
     "panel>=1.8.5",
+    "ruff>=0.14.13",
 ]
