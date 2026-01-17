@@ -251,9 +251,11 @@ def reduce_hubness(
     Mitigate hubness in cosine space via local centering.
 
     Computes cosine kNN neighborhoods on L2-normalized vectors
-    then subtracts each point's neighborhood mean direction and re-normalizes.
+    then subtracts each point's neighborhood mean direction 
+    and re-normalizes.
 
-    Args:
+    Args
+    ----
         embeddings (FloatArray) : embedding matrix of shape (n_samples, n_dims).
         k                (int)  : neighborhood size for local centering.
                                   (Default is 10).
