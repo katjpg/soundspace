@@ -132,7 +132,9 @@ def score_graph_structure(
             anomalies=anomalies,
         )
 
-    G = nx.from_scipy_sparse_array(adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR)
+    G = nx.from_scipy_sparse_array(
+        adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR
+    )
 
     n_edges = int(G.number_of_edges())
     n_components, largest_nodes = _component_summary(G)
@@ -140,7 +142,9 @@ def score_graph_structure(
     largest_size = int(len(largest_nodes))
     fragmentation = float(1.0 - (largest_size / float(n)))
 
-    degrees = np.fromiter((d for _, d in G.degree()), dtype=np.int64, count=n).astype(np.float64, copy=False)
+    degrees = np.fromiter((d for _, d in G.degree()), dtype=np.int64, count=n).astype(
+        np.float64, copy=False
+    )
     strengths = np.fromiter(
         (s for _, s in G.degree(weight=WEIGHT_ATTR)),
         dtype=np.float64,
@@ -165,7 +169,9 @@ def score_graph_structure(
 
     # compute weighted clustering whenever a weight attribute exists
     mean_clustering_weighted = (
-        _mean_clustering_on_nodes(G, largest_nodes, weight=WEIGHT_ATTR) if has_weight_attribute else 0.0
+        _mean_clustering_on_nodes(G, largest_nodes, weight=WEIGHT_ATTR)
+        if has_weight_attribute
+        else 0.0
     )
 
     if n_components > 1:
@@ -179,7 +185,9 @@ def score_graph_structure(
         **prep_diagnostics,
         "n_nodes": float(n),
         "n_edges": float(n_edges),
-        "density_undirected": float((2.0 * float(n_edges)) / (float(n) * float(n - 1))) if n > 1 else 0.0,
+        "density_undirected": float((2.0 * float(n_edges)) / (float(n) * float(n - 1)))
+        if n > 1
+        else 0.0,
         "min_degree": float(np.min(degrees)) if degrees.size > 0 else 0.0,
         "max_degree": float(np.max(degrees)) if degrees.size > 0 else 0.0,
         "median_degree": float(np.median(degrees)) if degrees.size > 0 else 0.0,
@@ -187,7 +195,9 @@ def score_graph_structure(
         "max_strength": float(np.max(strengths)) if strengths.size > 0 else 0.0,
         "median_strength": float(np.median(strengths)) if strengths.size > 0 else 0.0,
         "weighted_clustering_enabled": float(has_weight_attribute),
-        "weighted_clustering_informative": float(_diag_flag(prep_diagnostics, "has_weight_variation")),
+        "weighted_clustering_informative": float(
+            _diag_flag(prep_diagnostics, "has_weight_variation")
+        ),
     }
 
     return GraphStructure(
@@ -246,7 +256,9 @@ def score_modularity(
     if membership.ndim != 1:
         raise ValueError(f"membership must be 1D, got shape {membership.shape}")
     if not np.issubdtype(membership.dtype, np.integer):
-        raise ValueError(f"membership must be integer labels, got dtype {membership.dtype}")
+        raise ValueError(
+            f"membership must be integer labels, got dtype {membership.dtype}"
+        )
 
     adj, n, has_weight_attribute, prep_diagnostics, prep_anomalies = _prepare_adjacency(
         adjacency,
@@ -257,7 +269,9 @@ def score_modularity(
     )
 
     if int(membership.shape[0]) != n:
-        raise ValueError(f"membership length ({membership.shape[0]}) must match n ({n})")
+        raise ValueError(
+            f"membership length ({membership.shape[0]}) must match n ({n})"
+        )
 
     anomalies: list[str] = list(prep_anomalies)
 
@@ -275,9 +289,13 @@ def score_modularity(
         )
 
     if allow_self_loops and _diag_flag(prep_diagnostics, "has_self_loops"):
-        anomalies.append("self-loops retained; modularity includes them; pair metrics drop them")
+        anomalies.append(
+            "self-loops retained; modularity includes them; pair metrics drop them"
+        )
 
-    G = nx.from_scipy_sparse_array(adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR)
+    G = nx.from_scipy_sparse_array(
+        adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR
+    )
 
     labels = np.unique(membership)
     communities = [set(np.flatnonzero(membership == lab).tolist()) for lab in labels]
@@ -315,7 +333,11 @@ def score_modularity(
     if n_communities > (n // 2):
         anomalies.append(f"over-fragmented: {n_communities} communities for {n} nodes")
 
-    size_cv = float(np.std(community_sizes) / np.mean(community_sizes)) if community_sizes.size > 0 else 0.0
+    size_cv = (
+        float(np.std(community_sizes) / np.mean(community_sizes))
+        if community_sizes.size > 0
+        else 0.0
+    )
     if size_cv > 2.0:
         anomalies.append(f"extreme size imbalance (CV={size_cv:.2f})")
 
@@ -323,14 +345,22 @@ def score_modularity(
         **prep_diagnostics,
         "n_nodes": float(n),
         "n_communities": float(n_communities),
-        "mean_community_size": float(np.mean(community_sizes)) if community_sizes.size > 0 else 0.0,
-        "min_community_size": float(np.min(community_sizes)) if community_sizes.size > 0 else 0.0,
-        "max_community_size": float(np.max(community_sizes)) if community_sizes.size > 0 else 0.0,
+        "mean_community_size": float(np.mean(community_sizes))
+        if community_sizes.size > 0
+        else 0.0,
+        "min_community_size": float(np.min(community_sizes))
+        if community_sizes.size > 0
+        else 0.0,
+        "max_community_size": float(np.max(community_sizes))
+        if community_sizes.size > 0
+        else 0.0,
         "size_coefficient_variation": float(size_cv),
         "resolution": float(resolution),
         "weighted_modularity": float(has_weight_attribute),
         "assume_symmetric_zero_diag": float(assume_symmetric_zero_diag),
-        "modularity_includes_self_loops": float(allow_self_loops and _diag_flag(prep_diagnostics, "has_self_loops")),
+        "modularity_includes_self_loops": float(
+            allow_self_loops and _diag_flag(prep_diagnostics, "has_self_loops")
+        ),
     }
 
     return Modularity(
@@ -440,7 +470,9 @@ def _prepare_adjacency(
 
     min_weight_pre = float(np.min(adj.data)) if adj.data.size > 0 else 0.0
     if require_nonnegative and min_weight_pre < 0.0:
-        raise ValueError(f"adjacency contains negative weights (min={min_weight_pre:.3g})")
+        raise ValueError(
+            f"adjacency contains negative weights (min={min_weight_pre:.3g})"
+        )
 
     diag = adj.diagonal()
     diag_abs_sum = float(np.sum(np.abs(diag))) if diag.size > 0 else 0.0
@@ -454,7 +486,9 @@ def _prepare_adjacency(
         has_self_loops = False
 
     if symmetrize_method not in SYMMETRIZE_METHODS:
-        raise ValueError(f"unknown symmetrize_method '{symmetrize_method}', expected one of {SYMMETRIZE_METHODS}")
+        raise ValueError(
+            f"unknown symmetrize_method '{symmetrize_method}', expected one of {SYMMETRIZE_METHODS}"
+        )
 
     asym_pre = cast(CSRAdjacency, (adj - adj.T).tocsr())
     asym_pre.eliminate_zeros()
@@ -463,11 +497,15 @@ def _prepare_adjacency(
 
     symmetrized_applied = 0.0
     if asym_pre_nnz > 0:
-        max_abs_asym = float(np.max(np.abs(asym_pre.data))) if asym_pre.data.size > 0 else 0.0
+        max_abs_asym = (
+            float(np.max(np.abs(asym_pre.data))) if asym_pre.data.size > 0 else 0.0
+        )
         diagnostics["max_abs_asym"] = float(max_abs_asym)
 
         if symmetrize:
-            anomalies.append(f"asymmetric adjacency detected; symmetrizing via '{symmetrize_method}'")
+            anomalies.append(
+                f"asymmetric adjacency detected; symmetrizing via '{symmetrize_method}'"
+            )
             if symmetrize_method == "max":
                 adj = cast(CSRAdjacency, adj.maximum(adj.T).tocsr())
             else:
@@ -489,7 +527,9 @@ def _prepare_adjacency(
     weight_range = float(weight_max - weight_min)
 
     has_weight_attribute = bool(adj.data.size > 0)
-    has_weight_variation = bool(has_weight_attribute and weight_range > WEIGHT_RANGE_EPS)
+    has_weight_variation = bool(
+        has_weight_attribute and weight_range > WEIGHT_RANGE_EPS
+    )
 
     diagnostics["min_weight"] = float(weight_min)
     diagnostics["max_weight"] = float(weight_max)
@@ -531,12 +571,16 @@ def _component_summary(G: nx.Graph) -> tuple[int, set[int]]:
     return int(len(components)), set(largest)
 
 
-def _mean_clustering_on_nodes(G: nx.Graph, nodes: set[int], *, weight: str | None) -> float:
+def _mean_clustering_on_nodes(
+    G: nx.Graph, nodes: set[int], *, weight: str | None
+) -> float:
     if len(nodes) < 2:
         return 0.0
 
     # set count_zeros explicitly to stabilize interpretation across NetworkX versions
-    return float(nx.average_clustering(G.subgraph(nodes), weight=weight, count_zeros=True))
+    return float(
+        nx.average_clustering(G.subgraph(nodes), weight=weight, count_zeros=True)
+    )
 
 
 def _slice_csr(adj: CSRAdjacency, row_idx: IntArray, col_idx: IntArray) -> CSRAdjacency:
@@ -590,7 +634,9 @@ def _community_pair_metrics(
         diag_u = adj_u.diagonal()
         diag_u_abs_sum = float(np.sum(np.abs(diag_u))) if diag_u.size > 0 else 0.0
         if diag_u_abs_sum > 0.0:
-            adj_u = cast(CSRAdjacency, (adj_u - diags(diag_u, offsets=0, format="csr")).tocsr())
+            adj_u = cast(
+                CSRAdjacency, (adj_u - diags(diag_u, offsets=0, format="csr")).tocsr()
+            )
             adj_u.eliminate_zeros()
 
     for idx, lab in enumerate(labels):
@@ -630,10 +676,24 @@ def _community_pair_metrics(
         internal_possible = float(size * (size - 1) / 2.0)
         external_possible = float(size * (n - size))
 
-        internal_density[label_int] = float(internal_edges / internal_possible) if internal_possible > 0 else 0.0
-        external_density[label_int] = float(external_edges / external_possible) if external_possible > 0 else 0.0
+        internal_density[label_int] = (
+            float(internal_edges / internal_possible) if internal_possible > 0 else 0.0
+        )
+        external_density[label_int] = (
+            float(external_edges / external_possible) if external_possible > 0 else 0.0
+        )
 
-        internal_affinity[label_int] = float(internal_weight / internal_possible) if internal_possible > 0 else 0.0
-        external_affinity[label_int] = float(external_weight / external_possible) if external_possible > 0 else 0.0
+        internal_affinity[label_int] = (
+            float(internal_weight / internal_possible) if internal_possible > 0 else 0.0
+        )
+        external_affinity[label_int] = (
+            float(external_weight / external_possible) if external_possible > 0 else 0.0
+        )
 
-    return internal_density, external_density, internal_affinity, external_affinity, community_sizes
+    return (
+        internal_density,
+        external_density,
+        internal_affinity,
+        external_affinity,
+        community_sizes,
+    )

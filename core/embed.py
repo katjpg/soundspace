@@ -93,9 +93,7 @@ def extract(
 
         for path, tid in zip(batch_paths, batch_ids, strict=True):
             try:
-                waveform, _ = librosa.load(
-                    path, sr=embedder.sample_rate, mono=True
-                )
+                waveform, _ = librosa.load(path, sr=embedder.sample_rate, mono=True)
                 audio_waveforms.append(waveform)
                 valid_track_ids.append(tid)
             except Exception as e:
@@ -115,9 +113,7 @@ def extract(
         embedding_matrix = audio_features.cpu().numpy()
 
         for tid, emb_vector in zip(valid_track_ids, embedding_matrix, strict=True):
-            all_embeddings.append(
-                AudioEmbedding(track_id=tid, embedding=emb_vector)
-            )
+            all_embeddings.append(AudioEmbedding(track_id=tid, embedding=emb_vector))
 
     return all_embeddings
 

@@ -27,7 +27,9 @@ class AV:
     valence: float
 
 
-def load_merge_tracks(config: DatasetConfig, *, split: SplitName = "train") -> list[Track]:
+def load_merge_tracks(
+    config: DatasetConfig, *, split: SplitName = "train"
+) -> list[Track]:
     ds = config.datasets["merge"]
     metadata_file = _require_path(ds.metadata, "metadata_file")
     av_values_file = _require_path(ds.metadata, "av_values_file")

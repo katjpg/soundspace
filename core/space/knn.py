@@ -96,7 +96,9 @@ class KNN:
         """
         directed = self.directed_adjacency
         if directed is None:
-            raise ValueError("directed_adjacency is not available (cache_directed=False).")
+            raise ValueError(
+                "directed_adjacency is not available (cache_directed=False)."
+            )
 
         if directed.nnz == 0:
             return 0.0
@@ -223,7 +225,9 @@ def _build_directed_affinity(
     if clip_affinity:
         affinity = np.clip(affinity, 0.0, 1.0, out=affinity)
 
-    directed = sp.csr_matrix((affinity, (rows, cols)), shape=(n_nodes, n_nodes), dtype=dtype)
+    directed = sp.csr_matrix(
+        (affinity, (rows, cols)), shape=(n_nodes, n_nodes), dtype=dtype
+    )
 
     directed.sum_duplicates()
     if clip_affinity:

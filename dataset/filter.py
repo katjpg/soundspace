@@ -23,7 +23,6 @@ class Track:
     theme_tags: tuple[str, ...]
     style_tags: tuple[str, ...]
 
-
     def tags(self, group: TagGroup) -> tuple[str, ...]:
         if group == "mood":
             return self.mood_tags
@@ -32,7 +31,6 @@ class Track:
         if group == "theme":
             return self.theme_tags
         return self.style_tags
-
 
     def has_tags_in(self, groups: Sequence[TagGroup]) -> bool:
         for group in groups:
@@ -77,7 +75,9 @@ def clean_tags(raw_tags: Sequence[str]) -> tuple[str, ...]:
     return tuple(out)
 
 
-def _sample_uniform(tracks: Sequence[Track], sample_size: int, seed: int) -> list[Track]:
+def _sample_uniform(
+    tracks: Sequence[Track], sample_size: int, seed: int
+) -> list[Track]:
     if len(tracks) == 0:
         return []
 

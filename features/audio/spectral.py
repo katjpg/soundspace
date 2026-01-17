@@ -32,7 +32,7 @@ def compute_spectral(y: np.ndarray, sr: int) -> SpectralFeatures:
     mfcc_means = _compute_mfcc_means(y, sr, N_MFCC)
     centroid_mean, centroid_std = _compute_centroid_stats(y, sr)
     contrast_mean = _compute_contrast_mean(y, sr)
-    
+
     return SpectralFeatures(
         mfcc_1_mean=mfcc_means[0],
         mfcc_2_mean=mfcc_means[1],
@@ -48,10 +48,10 @@ def compute_spectral(y: np.ndarray, sr: int) -> SpectralFeatures:
 def _compute_mfcc_means(y: np.ndarray, sr: int, n_mfcc: int) -> tuple[float, ...]:
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
     means = np.asarray(np.mean(mfcc, axis=1), dtype=np.float32).reshape(-1)
-    
+
     if means.size != n_mfcc:
         raise ValueError(f"unexpected MFCC shape: {mfcc.shape}")
-    
+
     return tuple(float(v) for v in means)
 
 
@@ -59,10 +59,10 @@ def _compute_centroid_stats(y: np.ndarray, sr: int) -> tuple[float, float]:
     """Mean and std of spectral centroid."""
     centroid = librosa.feature.spectral_centroid(y=y, sr=sr)
     values = np.asarray(centroid, dtype=np.float32).reshape(-1)
-    
+
     if values.size == 0:
         return 0.0, 0.0
-    
+
     return float(np.mean(values)), float(np.std(values))
 
 
@@ -70,8 +70,8 @@ def _compute_contrast_mean(y: np.ndarray, sr: int) -> float:
     """Mean spectral contrast across frequency bands."""
     contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
     values = np.asarray(contrast, dtype=np.float32).reshape(-1)
-    
+
     if values.size == 0:
         return 0.0
-    
+
     return float(np.mean(values))

@@ -4,7 +4,11 @@ from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_samples
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_samples,
+)
 
 FloatArray: TypeAlias = NDArray[np.floating]
 IntArray: TypeAlias = NDArray[np.integer]
@@ -60,7 +64,9 @@ def score_cluster_quality(
 
     n_samples = int(X.shape[0])
     if int(labels.shape[0]) != n_samples:
-        raise ValueError(f"shape mismatch: X has {n_samples} rows, labels has {labels.shape[0]} entries")
+        raise ValueError(
+            f"shape mismatch: X has {n_samples} rows, labels has {labels.shape[0]} entries"
+        )
 
     anomalies: list[str] = []
     empty_sizes: IntArray = np.array([], dtype=np.int64)
@@ -136,7 +142,9 @@ def score_cluster_quality(
     n_clusters = int(unique_labels.size)
 
     if n_clusters < 2:
-        anomalies.append("fewer than 2 clusters after excluding noise; metrics undefined")
+        anomalies.append(
+            "fewer than 2 clusters after excluding noise; metrics undefined"
+        )
         diagnostics = _size_diagnostics(cluster_sizes)
         diagnostics.update(
             {
@@ -165,7 +173,9 @@ def score_cluster_quality(
         )
 
     if n_scored <= n_clusters:
-        anomalies.append("n_scored must exceed n_clusters for silhouette/CH; metrics undefined")
+        anomalies.append(
+            "n_scored must exceed n_clusters for silhouette/CH; metrics undefined"
+        )
         diagnostics = _size_diagnostics(cluster_sizes)
         diagnostics.update(
             {
@@ -194,7 +204,9 @@ def score_cluster_quality(
         )
 
     if int(np.min(cluster_sizes)) < 2:
-        anomalies.append("at least one cluster has size < 2; silhouette may be unstable")
+        anomalies.append(
+            "at least one cluster has size < 2; silhouette may be unstable"
+        )
 
     silhouette_mean, silhouette_std, silhouette_by_label = _silhouette_metrics(
         X_scored,
@@ -202,7 +214,9 @@ def score_cluster_quality(
         metric=metric,
         anomalies=anomalies,
     )
-    davies_bouldin, calinski_harabasz = _dbi_ch_metrics(X_scored, labels_scored, anomalies=anomalies)
+    davies_bouldin, calinski_harabasz = _dbi_ch_metrics(
+        X_scored, labels_scored, anomalies=anomalies
+    )
     dbcv = _dbcv_metric(X_scored, labels_scored, anomalies=anomalies)
 
     diagnostics = _size_diagnostics(cluster_sizes)
@@ -262,12 +276,16 @@ def _silhouette_metrics(
     by_label: MeanByLabel = {}
     for lab in np.unique(labels):
         mask = labels == lab
-        by_label[int(lab)] = float(np.mean(per_point[mask])) if bool(np.any(mask)) else 0.0
+        by_label[int(lab)] = (
+            float(np.mean(per_point[mask])) if bool(np.any(mask)) else 0.0
+        )
 
     return mean_val, std_val, by_label
 
 
-def _dbi_ch_metrics(X: FloatArray, labels: IntArray, anomalies: list[str]) -> tuple[float, float]:
+def _dbi_ch_metrics(
+    X: FloatArray, labels: IntArray, anomalies: list[str]
+) -> tuple[float, float]:
     dbi = 0.0
     chi = 0.0
 
@@ -302,7 +320,9 @@ def _dbcv_metric(X: FloatArray, labels: IntArray, anomalies: list[str]) -> float
     try:
         from hdbscan.validity import validity_index
     except Exception:
-        anomalies.append("dbcv unavailable (failed to import hdbscan.validity.validity_index)")
+        anomalies.append(
+            "dbcv unavailable (failed to import hdbscan.validity.validity_index)"
+        )
         return 0.0
 
     try:

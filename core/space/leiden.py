@@ -21,7 +21,7 @@ class LeidenPartition(Protocol):
 
     @property
     def modularity(self) -> float | None: ...
-    
+
 
 @dataclass(frozen=True, slots=True)
 class LeidenConfig:
@@ -77,7 +77,9 @@ class LeidenResult:
     anomalies: tuple[str, ...]
 
 
-def leiden_partition(graph: AffinityAdjacency, config: LeidenConfig | None = None) -> LeidenResult:
+def leiden_partition(
+    graph: AffinityAdjacency, config: LeidenConfig | None = None
+) -> LeidenResult:
     """Run Leiden community detection on an affinity adjacency.
 
     Args
@@ -111,7 +113,6 @@ def leiden_partition(graph: AffinityAdjacency, config: LeidenConfig | None = Non
         raise ValueError("leidenalg returned modularity=None (unexpected).")
     modularity = float(modularity_raw)
 
-
     return LeidenResult(
         membership=membership,
         modularity=modularity,
@@ -140,7 +141,9 @@ def _validate_affinity_adjacency(
 
     data = adjacency.data
     if data.size == 0:
-        raise ValueError("adjacency has nnz > 0 but empty .data; sparse structure is invalid.")
+        raise ValueError(
+            "adjacency has nnz > 0 but empty .data; sparse structure is invalid."
+        )
 
     if not np.isfinite(data).all():
         raise ValueError("adjacency contains non-finite edge weights.")
@@ -148,7 +151,9 @@ def _validate_affinity_adjacency(
     min_weight = float(np.min(data))
     max_weight = float(np.max(data))
     if min_weight < 0.0:
-        raise ValueError(f"adjacency must have non-negative affinity weights, min={min_weight}.")
+        raise ValueError(
+            f"adjacency must have non-negative affinity weights, min={min_weight}."
+        )
 
     diag = adjacency.diagonal()
     diagonal_abs_max = float(np.max(np.abs(diag))) if diag.size > 0 else 0.0

@@ -24,36 +24,38 @@ def from_pretrained(
 ) -> AffectPredictor:
     """Load encoder and VA predictor from config."""
     _check_essentia_available()
-    
+
     if model_name not in config.models:
         available: list[str] = sorted(config.models.keys())
         raise ValueError(f"unknown model {model_name!r}. available: {available}")
-    
+
     model = config.models[model_name]
-    
+
     if model.encoder is None:
         raise ValueError(f"model {model_name!r} has no encoder spec")
     if model.predictor is None:
         raise ValueError(f"model {model_name!r} has no predictor spec")
-    
+
     # verify model files exist
     if model.encoder.weights is None or not model.encoder.weights.exists():
         raise FileNotFoundError(f"encoder weights not found: {model.encoder.weights}")
     if model.predictor.weights is None or not model.predictor.weights.exists():
-        raise FileNotFoundError(f"predictor weights not found: {model.predictor.weights}")
-    
+        raise FileNotFoundError(
+            f"predictor weights not found: {model.predictor.weights}"
+        )
+
     import essentia.standard as es  # type: ignore
-    
+
     emb_pred = es.TensorflowPredictMusiCNN(  # type: ignore
         graphFilename=str(model.encoder.weights),
         output=model.encoder.output,
     )
-    
+
     va_pred = es.TensorflowPredict2D(  # type: ignore
         graphFilename=str(model.predictor.weights),
         output=model.predictor.output,
     )
-    
+
     return AffectPredictor(
         emb_predictor=emb_pred,
         va_predictor=va_pred,
@@ -69,7 +71,7 @@ def _check_essentia_available() -> None:
             "essentia-tensorflow required for affect prediction. "
             "install: pip install essentia-tensorflow"
         ) from e
-    
+
     required = ["TensorflowPredict2D", "TensorflowPredictMusiCNN"]
     missing = [name for name in required if not hasattr(es, name)]
     if missing:

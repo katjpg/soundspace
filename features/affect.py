@@ -29,7 +29,9 @@ def extract_affect(audio_path: Path, model: AffectPredictor) -> AffectFeatures:
 def compute_affect(y: np.ndarray, sr: int, model: AffectPredictor) -> AffectFeatures:
     """Compute valence-arousal from audio waveform using affect model."""
     if sr != model.sample_rate:
-        raise ValueError(f"sample rate mismatch: expected {model.sample_rate}, got {sr}")
+        raise ValueError(
+            f"sample rate mismatch: expected {model.sample_rate}, got {sr}"
+        )
 
     y = np.asarray(y, dtype=np.float32)
 
@@ -70,7 +72,6 @@ def _pool_embedding(emb_raw: np.ndarray) -> np.ndarray:
         return emb.astype(np.float32)
 
     raise ValueError(f"unexpected embedding shape: {emb.shape}")
-
 
 
 def _scale_to_m1_1(x_19: float) -> float:

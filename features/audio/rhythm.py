@@ -25,7 +25,7 @@ def compute_rhythm(y: np.ndarray, sr: int) -> RhythmFeatures:
     tempo_bpm = _estimate_tempo(y, sr)
     onset_env = _compute_onset_strength(y, sr)
     onset_mean, onset_std = _mean_std(onset_env)
-    
+
     return RhythmFeatures(
         tempo_bpm=tempo_bpm,
         onset_strength_mean=onset_mean,

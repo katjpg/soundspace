@@ -81,7 +81,9 @@ def score_trustworthiness(
 
     n_full = int(X_high.shape[0])
     if n_full != int(X_low.shape[0]):
-        raise ValueError(f"shape mismatch: high-D has {X_high.shape[0]}, low-D has {X_low.shape[0]}")
+        raise ValueError(
+            f"shape mismatch: high-D has {X_high.shape[0]}, low-D has {X_low.shape[0]}"
+        )
 
     if k <= 0:
         raise ValueError(f"k must be positive, got {k}")
@@ -99,10 +101,14 @@ def score_trustworthiness(
         )
 
     if k >= (n_full / 2.0):
-        raise ValueError(f"k must be < n/2 to keep trustworthiness in [0, 1], got k={k}, n={n_full}")
+        raise ValueError(
+            f"k must be < n/2 to keep trustworthiness in [0, 1], got k={k}, n={n_full}"
+        )
 
     if subsample_n is not None and subsample_n <= 0:
-        raise ValueError(f"subsample_n must be positive when provided, got {subsample_n}")
+        raise ValueError(
+            f"subsample_n must be positive when provided, got {subsample_n}"
+        )
 
     if subsample_n is None and n_full > MAX_RANK_SAMPLES:
         raise ValueError(
@@ -110,9 +116,13 @@ def score_trustworthiness(
             f"set subsample_n to bound O(n^2) memory/time"
         )
 
-    selected_idx = _choose_subsample_indices(n=n_full, subsample_n=subsample_n, seed=subsample_seed)
+    selected_idx = _choose_subsample_indices(
+        n=n_full, subsample_n=subsample_n, seed=subsample_seed
+    )
     if selected_idx is not None:
-        anomalies.append(f"subsampled evaluation to n={int(selected_idx.size)} (seed={subsample_seed})")
+        anomalies.append(
+            f"subsampled evaluation to n={int(selected_idx.size)} (seed={subsample_seed})"
+        )
         X_high_eval = np.asarray(X_high, dtype=np.float64)[selected_idx]
         X_low_eval = np.asarray(X_low, dtype=np.float64)[selected_idx]
     else:
@@ -131,14 +141,22 @@ def score_trustworthiness(
         )
 
     if k >= (n / 2.0):
-        raise ValueError(f"k must be < n/2 after subsampling to keep trustworthiness in [0, 1], got k={k}, n={n}")
+        raise ValueError(
+            f"k must be < n/2 after subsampling to keep trustworthiness in [0, 1], got k={k}, n={n}"
+        )
 
     denom = float(n * k * (2 * n - 3 * k - 1))
     if denom <= 0.0:
-        raise ValueError("invalid denominator for trustworthiness formula (n and k too close)")
+        raise ValueError(
+            "invalid denominator for trustworthiness formula (n and k too close)"
+        )
 
-    dist_high = pairwise_distances(X_high_eval, metric=metric_high).astype(np.float64, copy=False)
-    dist_low = pairwise_distances(X_low_eval, metric=metric_low).astype(np.float64, copy=False)
+    dist_high = pairwise_distances(X_high_eval, metric=metric_high).astype(
+        np.float64, copy=False
+    )
+    dist_low = pairwise_distances(X_low_eval, metric=metric_low).astype(
+        np.float64, copy=False
+    )
 
     nn_high = _knn_from_distance_matrix(dist_high, k=k)
     nn_low = _knn_from_distance_matrix(dist_low, k=k)
@@ -181,20 +199,32 @@ def score_trustworthiness(
     reference_used_metric = 0.0
 
     if reference and metric_low != "euclidean":
-        anomalies.append("reference trustworthiness uses euclidean in embedded space; skipping due to metric_low mismatch")
+        anomalies.append(
+            "reference trustworthiness uses euclidean in embedded space; skipping due to metric_low mismatch"
+        )
     elif reference:
         try:
-            trustworthiness = float(_sklearn_trustworthiness(X_high_eval, X_low_eval, k=k, metric=metric_high))
+            trustworthiness = float(
+                _sklearn_trustworthiness(
+                    X_high_eval, X_low_eval, k=k, metric=metric_high
+                )
+            )
             reference_ok = 1.0
             reference_used_metric = 1.0
         except TypeError:
             try:
-                trustworthiness = float(_sklearn_trustworthiness(X_high_eval, X_low_eval, k=k, metric=None))
+                trustworthiness = float(
+                    _sklearn_trustworthiness(X_high_eval, X_low_eval, k=k, metric=None)
+                )
                 reference_ok = 1.0
                 reference_used_metric = 0.0
-                anomalies.append("sklearn trustworthiness did not accept metric; ran without metric")
+                anomalies.append(
+                    "sklearn trustworthiness did not accept metric; ran without metric"
+                )
             except Exception as e:
-                anomalies.append(f"reference trustworthiness failed: {type(e).__name__}")
+                anomalies.append(
+                    f"reference trustworthiness failed: {type(e).__name__}"
+                )
         except Exception as e:
             anomalies.append(f"reference trustworthiness failed: {type(e).__name__}")
 
@@ -251,7 +281,9 @@ def score_shepard(
 
     n = int(X_high.shape[0])
     if n != int(X_low.shape[0]):
-        raise ValueError(f"shape mismatch: high-D has {X_high.shape[0]}, low-D has {X_low.shape[0]}")
+        raise ValueError(
+            f"shape mismatch: high-D has {X_high.shape[0]}, low-D has {X_low.shape[0]}"
+        )
 
     anomalies: list[str] = []
     if n < 2:
@@ -267,12 +299,18 @@ def score_shepard(
     n_pairs_eff = int(min(max(int(n_pairs), 1), max_pairs))
 
     rng = np.random.default_rng(int(seed))
-    idx_i = rng.integers(0, n, size=n_pairs_eff, endpoint=False).astype(np.int64, copy=False)
-    idx_j = rng.integers(0, n, size=n_pairs_eff, endpoint=False).astype(np.int64, copy=False)
+    idx_i = rng.integers(0, n, size=n_pairs_eff, endpoint=False).astype(
+        np.int64, copy=False
+    )
+    idx_j = rng.integers(0, n, size=n_pairs_eff, endpoint=False).astype(
+        np.int64, copy=False
+    )
 
     same_mask = idx_i == idx_j
     while bool(np.any(same_mask)):
-        replacement = rng.integers(0, n, size=int(np.sum(same_mask)), endpoint=False).astype(np.int64, copy=False)
+        replacement = rng.integers(
+            0, n, size=int(np.sum(same_mask)), endpoint=False
+        ).astype(np.int64, copy=False)
         idx_j[same_mask] = replacement
         same_mask = idx_i == idx_j
 
@@ -289,14 +327,22 @@ def score_shepard(
     tau, _ = cast(tuple[float, float], kendall_out)
 
     if np.isnan(rho):
-        anomalies.append("spearman correlation is NaN (near-constant distances); treating as 0.0")
+        anomalies.append(
+            "spearman correlation is NaN (near-constant distances); treating as 0.0"
+        )
         rho = 0.0
 
     if np.isnan(tau):
-        anomalies.append("kendall correlation is NaN (near-constant distances); treating as 0.0")
+        anomalies.append(
+            "kendall correlation is NaN (near-constant distances); treating as 0.0"
+        )
         tau = 0.0
 
-    diagnostics: Diagnostics = {"n": float(n), "n_pairs": float(n_pairs_eff), "seed": float(seed)}
+    diagnostics: Diagnostics = {
+        "n": float(n),
+        "n_pairs": float(n_pairs_eff),
+        "seed": float(seed),
+    }
     return Shepard(
         spearman=float(rho),
         kendall=float(tau),
@@ -305,13 +351,17 @@ def score_shepard(
     )
 
 
-def _choose_subsample_indices(*, n: int, subsample_n: int | None, seed: int) -> IntArray | None:
+def _choose_subsample_indices(
+    *, n: int, subsample_n: int | None, seed: int
+) -> IntArray | None:
     """Choose a deterministic subsample of row indices."""
     if subsample_n is None or subsample_n >= n:
         return None
 
     rng = np.random.default_rng(int(seed))
-    return rng.choice(n, size=int(subsample_n), replace=False).astype(np.int64, copy=False)
+    return rng.choice(n, size=int(subsample_n), replace=False).astype(
+        np.int64, copy=False
+    )
 
 
 def _knn_from_distance_matrix(dist: FloatArray, *, k: int) -> IntArray:
@@ -375,7 +425,9 @@ def _cosine_distance_pairs(
     return (1.0 - cos).astype(np.float64, copy=False)
 
 
-def _euclidean_distance_pairs(X: FloatArray, *, i_idx: IntArray, j_idx: IntArray) -> FloatArray:
+def _euclidean_distance_pairs(
+    X: FloatArray, *, i_idx: IntArray, j_idx: IntArray
+) -> FloatArray:
     """Compute euclidean distances for index pairs."""
     diff = X[i_idx] - X[j_idx]
     return np.linalg.norm(diff, axis=1).astype(np.float64, copy=False)

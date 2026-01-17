@@ -127,13 +127,17 @@ def score_isotropy(
     if l2_normalize:
         X = _l2_normalize_rows(X, eps=eps)
 
-    sv = np.linalg.svd(X, full_matrices=False, compute_uv=False).astype(np.float64, copy=False)
+    sv = np.linalg.svd(X, full_matrices=False, compute_uv=False).astype(
+        np.float64, copy=False
+    )
     sv_sq = sv * sv
     sv_sum = float(np.sum(sv))
     sv_sq_sum = float(np.sum(sv_sq))
 
     if sv_sq_sum <= float(eps):
-        anomalies.append("degenerate spectrum (sum of squared singular values near zero)")
+        anomalies.append(
+            "degenerate spectrum (sum of squared singular values near zero)"
+        )
         return Isotropy(
             score=0.0,
             singular_values=sv,
@@ -157,7 +161,9 @@ def score_isotropy(
 
     min_sv = float(np.min(sv)) if sv.size > 0 else 0.0
     max_sv = float(np.max(sv)) if sv.size > 0 else 0.0
-    condition_number = float(max_sv / (min_sv + float(eps))) if max_sv > 0.0 else float("inf")
+    condition_number = (
+        float(max_sv / (min_sv + float(eps))) if max_sv > 0.0 else float("inf")
+    )
 
     diagnostics: Diagnostics = {
         "n_samples": float(n_samples),
@@ -174,7 +180,9 @@ def score_isotropy(
     }
 
     if n_samples < n_dims:
-        anomalies.append("underdetermined system (n_samples < n_dims); spectrum is truncated to min(n_samples, n_dims)")
+        anomalies.append(
+            "underdetermined system (n_samples < n_dims); spectrum is truncated to min(n_samples, n_dims)"
+        )
 
     if n_samples < 100:
         anomalies.append("sample size below recommended minimum (100)")
@@ -349,7 +357,9 @@ def score_hubness(
         if int(np.min(k_by_row)) <= 0:
             anomalies.append("at least one row has no neighbors after dropping self")
         if bool(np.any(k_by_row != k_by_row[0])):
-            anomalies.append("effective neighbor count varies across rows after dropping self")
+            anomalies.append(
+                "effective neighbor count varies across rows after dropping self"
+            )
 
         flattened = knn_indices[keep_mask].astype(np.int64, copy=False)
         k_effective_mean = float(np.mean(k_by_row))
@@ -380,7 +390,9 @@ def score_hubness(
             anomalies=anomalies + ["empty neighbor list after self handling"],
         )
 
-    k_occurrence = np.bincount(flattened, minlength=n_samples).astype(np.int64, copy=False)
+    k_occurrence = np.bincount(flattened, minlength=n_samples).astype(
+        np.int64, copy=False
+    )
     hub_threshold = float(beta) * float(k_effective_mean)
 
     hubs_mask = k_occurrence > hub_threshold
@@ -396,13 +408,19 @@ def score_hubness(
 
     hub_rate = float(np.mean(hubs_mask))
     antihub_rate = float(np.mean(antihubs_mask))
-    hub_occurrence_rate = float(np.sum(k_occurrence[hubs_mask]) / float(total_neighbor_slots))
+    hub_occurrence_rate = float(
+        np.sum(k_occurrence[hubs_mask]) / float(total_neighbor_slots)
+    )
     gini = _gini_index(k_occurrence)
 
     if beta <= 1.0:
-        anomalies.append(f"beta ({beta}) is <= 1.0; hub threshold may be too permissive")
+        anomalies.append(
+            f"beta ({beta}) is <= 1.0; hub threshold may be too permissive"
+        )
     if drop_self and has_self and abs(k_effective_mean - float(k - 1)) > 0.25:
-        anomalies.append("unexpected effective k after dropping self; check knn_indices construction")
+        anomalies.append(
+            "unexpected effective k after dropping self; check knn_indices construction"
+        )
 
     diagnostics: Diagnostics = {
         "n_samples": float(n_samples),
@@ -422,7 +440,9 @@ def score_hubness(
         "q90_occurrence": float(np.percentile(k_occurrence, 90)),
         "q95_occurrence": float(np.percentile(k_occurrence, 95)),
         "q99_occurrence": float(np.percentile(k_occurrence, 99)),
-        "max_over_k_effective": float(np.max(k_occurrence) / float(k_effective_mean)) if k_effective_mean > 0 else 0.0,
+        "max_over_k_effective": float(np.max(k_occurrence) / float(k_effective_mean))
+        if k_effective_mean > 0
+        else 0.0,
         "hubs_count": float(hubs_idx.size),
         "antihubs_count": float(antihubs_idx.size),
     }
@@ -493,7 +513,12 @@ def score_embedding_quality(
 
     effective_rank = {"erank": float(erank), "max_rank": float(n_dims)}
     information_abundance = {"ia": float(ia), "max_ia": float(n_dims)}
-    diagnostics = {"n_samples": float(n_samples), "n_dims": float(n_dims), "k": float(k), "eps": float(eps)}
+    diagnostics = {
+        "n_samples": float(n_samples),
+        "n_dims": float(n_dims),
+        "k": float(k),
+        "eps": float(eps),
+    }
 
     return EmbeddingQuality(
         validity=validity,
@@ -564,7 +589,7 @@ def compute_alignment_uniformity(
     alignment_terms: list[float] = []
     for i, j in positive_pairs:
         dist = float(np.linalg.norm(Z[int(i)] - Z[int(j)]))
-        alignment_terms.append(dist**float(alpha))
+        alignment_terms.append(dist ** float(alpha))
 
     alignment = float(np.mean(alignment_terms))
 
@@ -633,7 +658,12 @@ def compare_neighborhoods(
 
     n = n0
     if n <= k + 1:
-        return {"mean_overlap": 0.0, "median_overlap": 0.0, "min_overlap": 0.0, "max_overlap": 0.0}
+        return {
+            "mean_overlap": 0.0,
+            "median_overlap": 0.0,
+            "min_overlap": 0.0,
+            "max_overlap": 0.0,
+        }
 
     rng = np.random.default_rng(int(seed))
     probes = rng.choice(n, size=min(int(n_probe), n), replace=False)
@@ -646,11 +676,15 @@ def compare_neighborhoods(
         sims_before[int(i)] = -np.inf
         sims_after[int(i)] = -np.inf
 
-        nn_before = set(np.argpartition(-sims_before, kth=int(k - 1))[: int(k)].tolist())
+        nn_before = set(
+            np.argpartition(-sims_before, kth=int(k - 1))[: int(k)].tolist()
+        )
         nn_after = set(np.argpartition(-sims_after, kth=int(k - 1))[: int(k)].tolist())
 
         denom = float(len(nn_before | nn_after))
-        overlaps.append(float(len(nn_before & nn_after)) / denom if denom > 0.0 else 0.0)
+        overlaps.append(
+            float(len(nn_before & nn_after)) / denom if denom > 0.0 else 0.0
+        )
 
     arr = np.asarray(overlaps, dtype=np.float64)
     return {
@@ -698,7 +732,15 @@ def _sample_pairwise_cosine(
     n = int(Z.shape[0])
 
     if n < 2:
-        return {"mean": 0.0, "std": 0.0, "min": 0.0, "q1": 0.0, "median": 0.0, "q3": 0.0, "max": 0.0}
+        return {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "q1": 0.0,
+            "median": 0.0,
+            "q3": 0.0,
+            "max": 0.0,
+        }
 
     n_actual = int(min(int(n_samples), (n * (n - 1)) // 2))
     sims = np.zeros(n_actual, dtype=np.float64)
@@ -769,7 +811,11 @@ def _measure_neighbor_separation(
 
     mean_nn = float(np.mean(nn_sims))
     mean_rand = float(np.mean(rand_sims))
-    return {"mean_nn_sim": mean_nn, "mean_rand_sim": mean_rand, "gap": mean_nn - mean_rand}
+    return {
+        "mean_nn_sim": mean_nn,
+        "mean_rand_sim": mean_rand,
+        "gap": mean_nn - mean_rand,
+    }
 
 
 def _measure_graph_degrees(Z: FloatArray, *, k: int) -> SimilarityStats:
@@ -816,7 +862,9 @@ def _measure_graph_degrees(Z: FloatArray, *, k: int) -> SimilarityStats:
 
 def _compute_effective_rank(Z: FloatArray, *, eps: float = L2_EPS) -> float:
     """Compute entropy-based effective rank from singular-value energy."""
-    sv = np.linalg.svd(Z, full_matrices=False, compute_uv=False).astype(np.float64, copy=False)
+    sv = np.linalg.svd(Z, full_matrices=False, compute_uv=False).astype(
+        np.float64, copy=False
+    )
     energy = sv * sv
     total = float(np.sum(energy))
 
@@ -830,7 +878,9 @@ def _compute_effective_rank(Z: FloatArray, *, eps: float = L2_EPS) -> float:
 
 def _compute_information_abundance(Z: FloatArray, *, eps: float = L2_EPS) -> float:
     """Compute information abundance as sum(sv)/max(sv)."""
-    sv = np.linalg.svd(Z, full_matrices=False, compute_uv=False).astype(np.float64, copy=False)
+    sv = np.linalg.svd(Z, full_matrices=False, compute_uv=False).astype(
+        np.float64, copy=False
+    )
     max_sv = float(np.max(sv)) if sv.size > 0 else 0.0
 
     if max_sv <= float(eps):
@@ -867,7 +917,6 @@ def _compute_singular_spectrum(Z: FloatArray, *, eps: float = L2_EPS) -> Spectru
         "n_dims": int(sv.size),
         "n_nonzero": int(np.sum(sv > float(1e-9))),
     }
-
 
 
 def _gini_index(values: IntArray) -> float:
