@@ -4,7 +4,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 
-from .io import SAMPLE_RATE, AudioData, load_audio
+from .io import SAMPLE_RATE, load_audio
 
 
 @dataclass(frozen=True, slots=True)
