@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -23,14 +22,7 @@ def from_pretrained(
     model_name: str = "musicnn",
     sample_rate: int = 16000,
 ) -> AffectPredictor:
-    """
-    Load encoder and VA predictor from config.
-    
-    Args:
-        config: Model configuration w/ paths to weights and metadata.
-        model_name: Name of model in config (default: "musicnn").
-        sample_rate: Audio sample rate for inference (default: 16000).
-    """
+    """Load encoder and VA predictor from config."""
     _check_essentia_available()
     
     if model_name not in config.models:
