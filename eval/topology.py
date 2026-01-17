@@ -121,12 +121,10 @@ def score_modularity(adjacency: Adjacency, membership: np.ndarray) -> Modularity
     Quantify community structure quality via modularity and density metrics.
 
     Args:
-    -----
         adjacency  (Adjacency) : adjacency matrix (n, n).
         membership (np.ndarray) : community labels (n,).
 
     Returns:
-    --------
         (Modularity) : modularity score with per-community diagnostics.
     """
     adj, n = _as_square_csr(adjacency)
@@ -190,12 +188,10 @@ def diagnose_graph(adjacency: Adjacency, membership: np.ndarray | None = None) -
     Compute graph structure diagnostics and optional modularity diagnostics.
 
     Args:
-    -----
         adjacency  (Adjacency) : adjacency matrix (n, n).
         membership (np.ndarray | None) : community labels (n,).
 
     Returns:
-    --------
         (dict[str, GraphStructure | Modularity]) : keys "structure" and optionally "modularity".
     """
     structure = score_graph_structure(adjacency)
