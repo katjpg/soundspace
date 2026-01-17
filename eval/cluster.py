@@ -45,14 +45,12 @@ def score_cluster_quality(
     Compute internal validation metrics for a fixed clustering assignment.
 
     Args:
-    -----
         X (FloatArray)     : data matrix of shape (n_samples, n_dims).
         labels (IntArray)  : integer labels of shape (n_samples,).
         metric (str)       : distance metric for silhouette ("euclidean", "cosine", ...).
         noise_label (int)  : label used for noise points. Default is -1.
 
     Returns:
-    --------
         ClusterQuality : metrics, size diagnostics, and anomaly flags.
     """
     if X.ndim != 2:
