@@ -51,7 +51,8 @@ def score_trustworthiness(
     """
     Measure neighborhood preservation from high-D to low-D.
 
-    Args:
+    Args
+    ----
         X_high         (FloatArray) : high-D array of shape (n, d).
         X_low          (FloatArray) : low-D array of shape (n, 2 or 3).
         k              (int)        : neighborhood size.
@@ -69,10 +70,12 @@ def score_trustworthiness(
         subsample_seed (int)        : RNG seed for subsampling.
                                       (Default is 42).
 
-    Returns:
+    Returns
+    -------
         (Trustworthiness) : trustworthiness, continuity, and LCMC(k).
 
-    Notes:
+    Notes
+    -----
         - LCMC is computed as: Q_NX(k) - k/(n-1), where Q_NX is mean kNN overlap fraction.
         - this implementation materializes full pairwise distance matrices, which is O(n^2) memory.
     """
@@ -265,7 +268,8 @@ def score_shepard(
     """
     Measure distance-rank preservation via Spearman and Kendall correlation.
 
-    Args:
+    Args
+    ----
         X_high  (FloatArray) : high-D array of shape (n, d).
         X_low   (FloatArray) : low-D array of shape (n, 2 or 3).
         n_pairs (int)        : number of random pairs to sample.
@@ -273,7 +277,8 @@ def score_shepard(
         seed    (int)        : RNG seed.
                                (Default is 42).
 
-    Returns:
+    Returns
+    -------
         (Shepard) : rank correlations between sampled pairwise distances.
     """
     if X_high.ndim != 2 or X_low.ndim != 2:

@@ -88,7 +88,8 @@ def score_graph_structure(
     """
     Quantify graph connectivity and degree distribution properties.
 
-    Args:
+    Args
+    ----
         adjacency           (Adjacency)        : adjacency matrix (n, n).
         symmetrize          (bool)             : if True, symmetrize adjacency before graph construction.
                                                  (Default is True).
@@ -99,7 +100,8 @@ def score_graph_structure(
         require_nonnegative (bool)             : if True, raise if any weight is negative.
                                                  (Default is True).
 
-    Returns:
+    Returns
+    -------
         (GraphStructure) : connectivity and distribution summaries with diagnostics and anomalies.
     """
     adj, n, has_weight_attribute, prep_diagnostics, prep_anomalies = _prepare_adjacency(
@@ -232,7 +234,8 @@ def score_modularity(
     """
     Quantify community structure quality via modularity and per-community pair metrics.
 
-    Args:
+    Args
+    ----
         adjacency           (Adjacency)        : adjacency matrix (n, n).
         membership          (IntArray)         : community labels (n,).
         symmetrize          (bool)             : if True, symmetrize adjacency before graph construction.
@@ -246,10 +249,12 @@ def score_modularity(
         resolution          (float)            : modularity resolution parameter.
                                                  (Default is 1.0).
 
-    Returns:
+    Returns
+    -------
         (Modularity) : modularity score with per-community diagnostics.
 
-    Notes:
+    Notes
+    -----
         This function treats adjacency values as affinity weights, not distances.
         If allow_self_loops=True, modularity will include self-loops; pair metrics drop them.
     """
@@ -388,7 +393,8 @@ def diagnose_graph(
     """
     Compute graph structure diagnostics and optional modularity diagnostics.
 
-    Args:
+    Args
+    ----
         adjacency           (Adjacency)        : adjacency matrix (n, n).
         membership (IntArray | None)           : community labels (n,).
         symmetrize          (bool)             : if True, symmetrize adjacency before graph construction.
@@ -402,7 +408,8 @@ def diagnose_graph(
         resolution          (float)            : modularity resolution parameter.
                                                  (Default is 1.0).
 
-    Returns:
+    Returns
+    -------
         (dict[str, GraphStructure | Modularity]) : keys "structure" and optionally "modularity".
     """
     structure = score_graph_structure(
@@ -604,16 +611,19 @@ def _community_pair_metrics(
     """
     Compute per-community internal/external densities and mean affinities.
 
-    Args:
+    Args
+    ----
         adj                        (CSRAdjacency) : adjacency matrix (n, n).
         membership                    (IntArray)  : integer community labels (n,).
         labels                        (IntArray)  : unique labels present in membership.
         assume_symmetric_zero_diag       (bool)   : if True, treat adj as symmetric with zero diagonal.
 
-    Returns:
+    Returns
+    -------
         (CommunityPairMetrics) : (internal_density, external_density, internal_affinity, external_affinity, sizes).
 
-    Notes:
+    Notes
+    -----
         When assume_symmetric_zero_diag is False, this function constructs an undirected view via max(A, A.T)
         and drops diagonal contributions to keep pair denominators interpretable.
     """

@@ -59,14 +59,16 @@ def extract(
     """
     Extract CLAP embeddings from audio file(s).
 
-    Args:
+    Args
+    ----
         audio_paths (Path | Sequence[Path]) : single path or list of paths to audio files.
         embedder      (ClapEmbedder)        : loaded CLAP model.
         track_ids     (str | Sequence[str]) : optional track IDs, defaults to filenames.
         batch_size             (int)        : num files to process per batch.
                                               (Default is 8).
 
-    Returns:
+    Returns
+    -------
         (list[AudioEmbedding]) : one embedding per audio file.
     """
     if isinstance(audio_paths, Path):
@@ -154,10 +156,12 @@ def center_and_normalize(
 
     Breaks cone geometry in CLAP embeddings to improve isotropy.
 
-    Args:
+    Args
+    ----
         embeddings (Sequence[AudioEmbedding]) : list of raw embeddings.
 
-    Returns:
+    Returns
+    -------
         (list[AudioEmbedding]) : centered + normalized embeddings.
     """
     emb_matrix = np.vstack([e.embedding for e in embeddings])

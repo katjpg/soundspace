@@ -78,9 +78,10 @@ def score_isotropy(
     Measure how uniformly variance is distributed across directions.
 
     This is a centered spectral-uniformity proxy based on the singular values of the
-    centered embedding matrix. Not an implementation of the IsoScore paper.
+    centered embedding matrix.
 
-    Args:
+    Args
+    ----
         embeddings    (FloatArray) : embedding matrix of shape (n_samples, n_dims).
         center              (bool) : subtract mean before SVD.
                                      (Default is True).
@@ -90,12 +91,14 @@ def score_isotropy(
         eps                (float) : numerical stability constant.
                                      (Default is 1e-12).
 
-    Returns:
+    Returns
+    -------
         (Isotropy) : isotropy ratio in [~1/d, 1], spectral entropy, and effective rank.
 
-    Notes:
-        - score uses singular values σ directly: (sum σ)^2 / (d * sum σ^2).
-        - effective_rank uses energy weights σ^2 via exp(H(p)), where p ∝ σ^2.
+    Notes
+    -----
+        - score uses singular values σ directly (sum σ)^2 / (d * sum σ^2).
+        - effective_rank uses energy weights σ^2 via exp(H(p)).
     """
     if embeddings.ndim != 2:
         raise ValueError(f"embeddings must be 2D, got shape {embeddings.shape}")
@@ -206,18 +209,18 @@ def calibrate_isotropy(
     """
     Transform embeddings to improve isotropy via whitening or centering.
 
-    Args:
+    Args
+    ----
         embeddings (FloatArray) : embedding matrix of shape (n_samples, n_dims).
         method          (str)   : "whitening" or "centering".
                                   (Default is "whitening").
         eps            (float)  : covariance regularization for whitening.
                                   (Default is 1e-5).
 
-    Returns:
+    Returns
+    -------
         (FloatArray) : transformed embeddings with same shape.
 
-    Raises:
-        ValueError : if method is unknown.
     """
     X = np.asarray(embeddings, dtype=np.float64)
 
@@ -247,8 +250,8 @@ def reduce_hubness(
     """
     Mitigate hubness in cosine space via local centering.
 
-    This transform computes cosine kNN neighborhoods on L2-normalized vectors, then
-    subtracts each point's neighborhood mean direction and re-normalizes.
+    Computes cosine kNN neighborhoods on L2-normalized vectors
+    then subtracts each point's neighborhood mean direction and re-normalizes.
 
     Args:
         embeddings (FloatArray) : embedding matrix of shape (n_samples, n_dims).
@@ -257,7 +260,8 @@ def reduce_hubness(
         eps             (float) : numerical stability constant.
                                   (Default is 1e-12).
 
-    Returns:
+    Returns
+    -------
         (FloatArray) : transformed L2-normalized embeddings with same shape.
     """
     from sklearn.neighbors import NearestNeighbors
@@ -298,7 +302,8 @@ def score_hubness(
     """
     Quantify hubness via the k-occurrence (reverse neighbor count) distribution.
 
-    Args:
+    Args
+    ----
         knn_indices (IntArray) : k-NN indices of shape (n_samples, k).
         beta          (float)  : hub threshold multiplier for O_k(x) > beta*k.
                                  (Default is 3.0).
@@ -307,11 +312,10 @@ def score_hubness(
         drop_self     (bool)   : drop i from row i if present.
                                  (Default is True).
 
-    Returns:
+    Returns
+    -------
         (Hubness) : hubness scores, distribution summaries, and index sets.
 
-    Raises:
-        ValueError : if knn_indices is not 2D or contains out-of-range indices.
     """
     if knn_indices.ndim != 2:
         raise ValueError(f"knn_indices must be 2D, got shape {knn_indices.shape}")
@@ -471,7 +475,8 @@ def score_embedding_quality(
     """
     Validate embedding quality across multiple metrics.
 
-    Args:
+    Args
+    ----
         embeddings (FloatArray) : embedding matrix of shape (n_samples, n_dims).
         k                (int)  : num neighbors for cosine kNN diagnostics.
                                   (Default is 15).
@@ -480,7 +485,8 @@ def score_embedding_quality(
         eps              (float): numerical stability constant for normalization.
                                   (Default is 1e-12).
 
-    Returns:
+    Returns
+    -------
         (EmbeddingQuality) : metric bundle for QA and debugging.
     """
     if embeddings.ndim != 2:
@@ -548,7 +554,8 @@ def compute_alignment_uniformity(
     """
     Compute alignment and uniformity for contrastive learning diagnostics.
 
-    Args:
+    Args
+    ----
         embeddings (FloatArray) : embedding matrix (n_samples, n_dims).
         positive_pairs (list[tuple[int, int]]) : index pairs expected to be similar.
         l2_normalize (bool) : if True, compute both metrics on unit-norm embeddings.
@@ -565,7 +572,8 @@ def compute_alignment_uniformity(
         eps          (float)    : numerical stability constant for normalization.
                                   (Default is 1e-12).
 
-    Returns:
+    Returns
+    -------
         (dict[str, float]) : alignment and uniformity values.
     """
     X = np.asarray(embeddings, dtype=np.float64)
@@ -630,7 +638,8 @@ def compare_neighborhoods(
     """
     Measure Jaccard overlap of cosine kNN neighborhoods before vs after transformation.
 
-    Args:
+    Args
+    ----
         embeddings_before (FloatArray) : embedding matrix before transformation.
         embeddings_after  (FloatArray) : embedding matrix after transformation.
         k           (int) : num neighbors for kNN.
@@ -642,7 +651,8 @@ def compare_neighborhoods(
         eps        (float): numerical stability constant for normalization.
                             (Default is 1e-12).
 
-    Returns:
+    Returns
+    -------
         (dict[str, float]) : overlap summary statistics.
     """
     if k <= 0:
