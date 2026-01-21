@@ -14,22 +14,12 @@ class PathConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class ModelSpec:
-    model_id: str
-    output: str
-    weights: Path | None = None
-    metadata: Path | None = None
-
-
-@dataclass(frozen=True, slots=True)
 class Model:
     name: str
     provider: str
     model_id: str | None = None
     device: str | None = None
     dtype: str = "float32"
-    encoder: ModelSpec | None = None
-    predictor: ModelSpec | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +32,7 @@ def load_config(config_path: Path) -> ModelConfig:
     """Load model config from YAML file."""
     raw = _load_yaml(config_path)
     paths = _load_paths(config_path, raw)
-    models = _load_models(paths, raw)
+    models = _load_models(raw)
     return ModelConfig(paths=paths, models=models)
 
 
@@ -82,7 +72,7 @@ def _load_paths(config_path: Path, raw: dict[str, Any]) -> PathConfig:
     )
 
 
-def _load_models(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Model]:
+def _load_models(raw: dict[str, Any]) -> dict[str, Model]:
     models_raw = raw["models"]
 
     if not isinstance(models_raw, dict):
@@ -97,48 +87,12 @@ def _load_models(paths: PathConfig, raw: dict[str, Any]) -> dict[str, Model]:
         if "provider" not in spec:
             raise ValueError(f"model '{name}' missing 'provider'")
 
-        provider = str(spec["provider"])
-        provider_dir = paths.models_root / provider
-
-        encoder = _load_spec(provider_dir, spec.get("encoder"), name, "encoder")
-        predictor = _load_spec(provider_dir, spec.get("predictor"), name, "predictor")
-
         models[name] = Model(
             name=name,
-            provider=provider,
+            provider=str(spec["provider"]),
             model_id=spec.get("model_id"),
             device=spec.get("device"),
             dtype=spec.get("dtype", "float32"),
-            encoder=encoder,
-            predictor=predictor,
         )
 
     return models
-
-
-def _load_spec(
-    base_dir: Path,
-    raw: dict[str, Any] | None,
-    model_name: str,
-    spec_type: str,
-) -> ModelSpec | None:
-    if not raw:
-        return None
-
-    if not isinstance(raw, dict):
-        raise ValueError(f"model '{model_name}' {spec_type} must be a dict")
-
-    if "model_id" not in raw:
-        raise ValueError(f"model '{model_name}' {spec_type} missing 'model_id'")
-    if "output" not in raw:
-        raise ValueError(f"model '{model_name}' {spec_type} missing 'output'")
-
-    weights = base_dir / str(raw["weights"]) if "weights" in raw else None
-    metadata = base_dir / str(raw["metadata"]) if "metadata" in raw else None
-
-    return ModelSpec(
-        model_id=str(raw["model_id"]),
-        output=str(raw["output"]),
-        weights=weights,
-        metadata=metadata,
-    )

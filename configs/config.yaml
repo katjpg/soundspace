@@ -5,19 +5,6 @@ paths:
   output_root: dataset/output
 
 models:
-  musicnn:
-    provider: essentia
-    encoder:
-      model_id: msd-musicnn
-      weights: msd-musicnn-1.pb
-      metadata: msd-musicnn-1.json
-      output: model/dense/BiasAdd
-    predictor:
-      model_id: deam-msd-musicnn
-      weights: deam-msd-musicnn-2.pb
-      metadata: deam-msd-musicnn-2.json
-      output: model/Identity
-
   clap_music:
     provider: huggingface
     model_id: laion/larger_clap_music
