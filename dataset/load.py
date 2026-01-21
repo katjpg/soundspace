@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
 from configs.dataset import DatasetConfig
-from dataset.filter import Track, clean_tags
+from dataset.filter import Track, clean_tags, consolidate_genres
 
 
 SplitName: TypeAlias = Literal["train", "val", "test"]
@@ -13,7 +13,11 @@ SplitName: TypeAlias = Literal["train", "val", "test"]
 
 @dataclass(frozen=True, slots=True)
 class MergeMeta:
+    """Intermediate metadata holder during CSV parsing."""
+
     duration_s: float | None
+    artist: str
+    title: str
     mood_tags: tuple[str, ...]
     genre_tags: tuple[str, ...]
     theme_tags: tuple[str, ...]
@@ -23,6 +27,8 @@ class MergeMeta:
 
 @dataclass(frozen=True, slots=True)
 class AV:
+    """Arousal-valence pair."""
+
     arousal: float
     valence: float
 
@@ -30,6 +36,19 @@ class AV:
 def load_merge_tracks(
     config: DatasetConfig, *, split: SplitName = "train"
 ) -> list[Track]:
+    """
+    Load MERGE tracks for a specific split using config paths.
+
+    Args
+    ----
+        config (DatasetConfig) : dataset configuration with MERGE paths.
+        split      (SplitName) : which split to load: "train", "val", or "test".
+                                 (Default is "train").
+
+    Returns
+    -------
+        (list[Track]) : tracks with complete metadata and AV values.
+    """
     ds = config.datasets["merge"]
     metadata_file = _require_path(ds.metadata, "metadata_file")
     av_values_file = _require_path(ds.metadata, "av_values_file")
@@ -48,10 +67,13 @@ def load_merge_tracks(
             raise ValueError(f"MERGE metadata missing Song={song_id}")
 
         av = av_map.get(song_id)
-        arousal = av.arousal if av is not None else None
-        valence = av.valence if av is not None else None
+        if av is None:
+            # skip tracks without AV values
+            continue
 
         audio_path = ds.audio.dir / quadrant / f"{song_id}.mp3"
+        if not audio_path.exists():
+            continue
 
         duration_s = meta.duration_s
         if duration_s is None or duration_s <= 0.0:
@@ -70,12 +92,15 @@ def load_merge_tracks(
             Track(
                 track_id=song_id,
                 audio_path=audio_path,
-                duration_s=duration_s,
                 quadrant=quadrant,
-                arousal=arousal,
-                valence=valence,
+                duration_s=duration_s,
+                artist=meta.artist,
+                title=meta.title,
+                arousal=av.arousal,
+                valence=av.valence,
                 mood_tags=meta.mood_tags,
                 genre_tags=meta.genre_tags,
+                genre_tags_consolidated=consolidate_genres(meta.genre_tags),
                 theme_tags=meta.theme_tags,
                 style_tags=meta.style_tags,
             )
@@ -85,6 +110,7 @@ def load_merge_tracks(
 
 
 def _merge_split_file(metadata: dict[str, object], split: SplitName) -> Path:
+    """Get split file path from metadata config."""
     split_spec = metadata.get("split")
     if not isinstance(split_spec, dict):
         raise ValueError("merge.metadata.split must be a dict")
@@ -98,6 +124,7 @@ def _merge_split_file(metadata: dict[str, object], split: SplitName) -> Path:
 
 
 def _require_path(metadata: dict[str, object], key: str) -> Path:
+    """Extract required Path from metadata dict."""
     val = metadata.get(key)
     if not isinstance(val, Path):
         raise ValueError(f"merge.metadata.{key} must be a resolved Path")
@@ -105,6 +132,7 @@ def _require_path(metadata: dict[str, object], key: str) -> Path:
 
 
 def _read_merge_metadata(path: Path) -> dict[str, MergeMeta]:
+    """Parse metadata CSV into song_id -> MergeMeta mapping."""
     out: dict[str, MergeMeta] = {}
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -113,6 +141,9 @@ def _read_merge_metadata(path: Path) -> dict[str, MergeMeta]:
             quadrant = _get_optional(row, "Quadrant")
             duration_s = _to_optional_float(_get_optional(row, "Duration"))
 
+            artist = _get_optional(row, "Artist") or ""
+            title = _get_optional(row, "Title") or ""
+
             moods_all = _split_csv_list(_get_optional(row, "MoodsAll"))
             genres = _split_csv_list(_get_optional(row, "Genres"))
             themes = _split_csv_list(_get_optional(row, "Themes"))
@@ -120,8 +151,10 @@ def _read_merge_metadata(path: Path) -> dict[str, MergeMeta]:
 
             out[song_id] = MergeMeta(
                 duration_s=duration_s,
+                artist=artist,
+                title=title,
                 mood_tags=clean_tags(moods_all),
-                genre_tags=clean_tags(genres),
+                genre_tags=tuple(genres),  # keep original case for consolidation
                 theme_tags=clean_tags(themes),
                 style_tags=clean_tags(styles),
                 quadrant=quadrant,
@@ -131,6 +164,7 @@ def _read_merge_metadata(path: Path) -> dict[str, MergeMeta]:
 
 
 def _read_merge_av_values(path: Path) -> dict[str, AV]:
+    """Parse AV values CSV into song_id -> AV mapping."""
     out: dict[str, AV] = {}
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -143,6 +177,7 @@ def _read_merge_av_values(path: Path) -> dict[str, AV]:
 
 
 def _read_split_rows(path: Path) -> list[tuple[str, str]]:
+    """Parse split CSV into (song_id, quadrant) tuples."""
     rows: list[tuple[str, str]] = []
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -154,6 +189,7 @@ def _read_split_rows(path: Path) -> list[tuple[str, str]]:
 
 
 def _duration_from_audio(path: Path) -> float | None:
+    """Attempt to get duration from audio file using available libraries."""
     if not path.exists():
         return None
 
@@ -173,6 +209,7 @@ def _duration_from_audio(path: Path) -> float | None:
 
 
 def _duration_from_librosa(path: Path) -> float | None:
+    """Get duration via librosa."""
     try:
         import librosa
     except Exception:
@@ -186,6 +223,7 @@ def _duration_from_librosa(path: Path) -> float | None:
 
 
 def _essentia_standard() -> Any | None:
+    """Lazy import essentia.standard module."""
     try:
         return importlib.import_module("essentia.standard")
     except Exception:
@@ -193,6 +231,7 @@ def _essentia_standard() -> Any | None:
 
 
 def _duration_from_essentia_metadata(path: Path) -> float | None:
+    """Get duration from essentia MetadataReader."""
     es = _essentia_standard()
     if es is None:
         return None
@@ -215,6 +254,7 @@ def _duration_from_essentia_metadata(path: Path) -> float | None:
 
 
 def _duration_from_essentia_decode(path: Path) -> float | None:
+    """Get duration by decoding audio with essentia MonoLoader."""
     es = _essentia_standard()
     if es is None:
         return None
@@ -235,6 +275,7 @@ def _duration_from_essentia_decode(path: Path) -> float | None:
 
 
 def _split_csv_list(blob: str | None) -> list[str]:
+    """Split comma-separated string into list of trimmed strings."""
     if blob is None:
         return []
     s = blob.strip()
@@ -244,6 +285,7 @@ def _split_csv_list(blob: str | None) -> list[str]:
 
 
 def _to_optional_float(val: str | None) -> float | None:
+    """Parse string to float, return None if invalid."""
     if val is None:
         return None
     s = val.strip()
@@ -256,6 +298,7 @@ def _to_optional_float(val: str | None) -> float | None:
 
 
 def _get(row: dict[str, str | None], key: str) -> str:
+    """Get required string value from CSV row."""
     val = row.get(key)
     if val is None:
         raise ValueError(f"missing column '{key}'")
@@ -266,6 +309,7 @@ def _get(row: dict[str, str | None], key: str) -> str:
 
 
 def _get_optional(row: dict[str, str | None], key: str) -> str | None:
+    """Get optional string value from CSV row."""
     val = row.get(key)
     if val is None:
         return None
