@@ -1,11 +1,8 @@
 from dataclasses import dataclass
-from typing import TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 
-
-FloatArray: TypeAlias = NDArray[np.floating]
+from dtypes import FloatArray
 
 L2_EPS = 1e-12
 PAIRWISE_SAMPLE_SIZE = 10_000

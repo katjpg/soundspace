@@ -1,16 +1,11 @@
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 
 from dataset.filter import Track
-
-
-FloatArray: TypeAlias = NDArray[np.floating]
-IntArray: TypeAlias = NDArray[np.integer]
+from dtypes import IntArray
 
 
 @dataclass(frozen=True, slots=True)

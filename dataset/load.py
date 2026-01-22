@@ -2,13 +2,11 @@ import csv
 import importlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, TypeAlias
+from typing import Any
 
 from configs.dataset import DatasetConfig
 from dataset.filter import Track, clean_tags, consolidate_genres
-
-
-SplitName: TypeAlias = Literal["train", "val", "test"]
+from dtypes import SplitName
 
 
 @dataclass(frozen=True, slots=True)

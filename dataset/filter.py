@@ -2,13 +2,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Literal, TypeAlias
 
 import pandas as pd
 
-
-TagGroup: TypeAlias = Literal["mood", "genre", "theme", "style"]
-SamplingStrategy: TypeAlias = Literal["none", "uniform"]
+from dtypes import SamplingStrategy, TagGroup
 
 
 # column mappings: raw CSV headers -> standardized names
@@ -189,6 +186,7 @@ def clean_tags(raw_tags: Sequence[str]) -> tuple[str, ...]:
             seen.add(cleaned)
             out.append(cleaned)
     return tuple(out)
+
 
 def _read_metadata(path: Path) -> pd.DataFrame:
     """Load and standardize metadata CSV."""

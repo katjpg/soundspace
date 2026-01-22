@@ -2,15 +2,12 @@ from collections import Counter
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
-from typing import Any, TypeAlias
 import json
 import math
 
 import pandas as pd
 
-
-IgraphGraph: TypeAlias = Any
-EdgeWeights: TypeAlias = dict[tuple[str, str], float]
+from dtypes import EdgeWeights, IgraphGraph
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,9 +35,7 @@ class ClusterLabels:
     modularity: float
 
 
-def extract_top_k_tags(
-    tags: str | None, weights: str | None
-) -> tuple[str, ...]:
+def extract_top_k_tags(tags: str | None, weights: str | None) -> tuple[str, ...]:
     """Extract tags with maximum weight from comma-separated strings."""
     if tags is None or (isinstance(tags, float) and math.isnan(tags)):
         return ()
@@ -277,9 +272,7 @@ def cluster_tags(
             cluster_to_tags[cluster_id] = []
         cluster_to_tags[cluster_id].append(tag_names[idx])
 
-    sorted_clusters = sorted(
-        cluster_to_tags.items(), key=lambda x: (-len(x[1]), x[0])
-    )
+    sorted_clusters = sorted(cluster_to_tags.items(), key=lambda x: (-len(x[1]), x[0]))
 
     clusters: dict[str, tuple[str, ...]] = {}
     tag_to_cluster: dict[str, str] = {}
@@ -402,8 +395,7 @@ def merge_clusters(
                     continue
 
                 scores = [
-                    edge_weights.get((orphan_tag, t), 0.0)
-                    for t in cluster_sets[c_id]
+                    edge_weights.get((orphan_tag, t), 0.0) for t in cluster_sets[c_id]
                 ]
                 top_scores = sorted(scores, reverse=True)[:3]
                 avg = sum(top_scores) / len(top_scores) if top_scores else float("-inf")
@@ -413,12 +405,12 @@ def merge_clusters(
                     best_cluster = c_id
 
             if best_cluster is not None:
-                cluster_sets[best_cluster] = cluster_sets[best_cluster] | cluster_sets[orphan_id]
+                cluster_sets[best_cluster] = (
+                    cluster_sets[best_cluster] | cluster_sets[orphan_id]
+                )
                 del cluster_sets[orphan_id]
 
-    sorted_clusters = sorted(
-        cluster_sets.items(), key=lambda x: (-len(x[1]), x[0])
-    )
+    sorted_clusters = sorted(cluster_sets.items(), key=lambda x: (-len(x[1]), x[0]))
 
     clusters: dict[str, tuple[str, ...]] = {}
     tag_to_cluster: dict[str, str] = {}

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from collections.abc import Sequence
-from typing import Any, Protocol, TypeAlias
+from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
 import scipy.sparse as sp
 
-IgraphGraph: TypeAlias = Any
+from dtypes import IgraphGraph
 
 
 class AffinityAdjacency(Protocol):

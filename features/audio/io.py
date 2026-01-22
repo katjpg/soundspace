@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import TypeAlias
 
 import librosa
 import numpy as np
 
 SAMPLE_RATE = 22050
 
-AudioData = tuple[np.ndarray, int]
+AudioData: TypeAlias = tuple[np.ndarray, int]
 
 
 def load_audio(audio_path: Path, *, sr: int = SAMPLE_RATE) -> AudioData:

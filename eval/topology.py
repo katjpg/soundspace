@@ -1,18 +1,12 @@
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from typing import cast
 
 import networkx as nx
 import numpy as np
-from numpy.typing import NDArray
 from scipy import sparse
 from scipy.sparse import csr_matrix, diags
 
-
-Adjacency: TypeAlias = csr_matrix | np.ndarray
-IntArray: TypeAlias = NDArray[np.integer]
-FloatArray: TypeAlias = NDArray[np.floating]
-
-SymmetrizeMethod: TypeAlias = Literal["max", "mean"]
+from dtypes import Adjacency, FloatArray, IntArray, SymmetrizeMode
 
 WEIGHT_ATTR = "weight"
 
@@ -48,7 +42,7 @@ def score_graph_quality(
     *,
     resolution: float = 1.0,
     symmetrize: bool = True,
-    symmetrize_method: SymmetrizeMethod = "max",
+    symmetrize_mode: SymmetrizeMode = "max",
 ) -> GraphQuality:
     """
     Compute graph and community structure quality metrics.
@@ -61,7 +55,7 @@ def score_graph_quality(
                                              (Default is 1.0).
         symmetrize                (bool)   : if True, symmetrize adjacency.
                                              (Default is True).
-        symmetrize_method (SymmetrizeMethod) : "max" (union) or "mean" (average).
+        symmetrize_mode     (SymmetrizeMode) : "max" (union) or "mean" (average).
                                                (Default is "max").
 
     Returns
@@ -92,10 +86,12 @@ def score_graph_quality(
         )
 
     # prepare adjacency: remove self-loops, symmetrize
-    adj = _prepare_adjacency(adj, symmetrize=symmetrize, method=symmetrize_method)
+    adj = _prepare_adjacency(adj, symmetrize=symmetrize, mode=symmetrize_mode)
 
     # build NetworkX graph
-    G = nx.from_scipy_sparse_array(adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR)
+    G = nx.from_scipy_sparse_array(
+        adj, create_using=nx.Graph, edge_attribute=WEIGHT_ATTR
+    )
 
     n_edges = G.number_of_edges()
     n_components = nx.number_connected_components(G)
@@ -154,7 +150,7 @@ def _prepare_adjacency(
     adj: csr_matrix,
     *,
     symmetrize: bool,
-    method: SymmetrizeMethod,
+    mode: SymmetrizeMode,
 ) -> csr_matrix:
     """Remove self-loops and optionally symmetrize."""
     # remove self-loops
@@ -168,8 +164,10 @@ def _prepare_adjacency(
         diff = adj - adj.T
         diff.eliminate_zeros()
         if diff.nnz > 0:
-            if method == "max":
+            if mode == "max":
                 adj = cast(csr_matrix, adj.maximum(adj.T).tocsr())
+            elif mode == "min":
+                adj = cast(csr_matrix, adj.minimum(adj.T).tocsr())
             else:
                 adj = cast(csr_matrix, ((adj + adj.T) * 0.5).tocsr())
             adj.eliminate_zeros()

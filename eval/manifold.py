@@ -1,14 +1,10 @@
 from dataclasses import dataclass
-from typing import TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.stats import spearmanr
 from sklearn.metrics import pairwise_distances
 
-
-FloatArray: TypeAlias = NDArray[np.floating]
-IntArray: TypeAlias = NDArray[np.integer]
+from dtypes import FloatArray, IntArray
 
 L2_EPS = 1e-12
 DEFAULT_SUBSAMPLE_N = 5000
@@ -264,5 +260,7 @@ def _shepard_correlation(
     d_low = dist_low[idx_i, idx_j]
 
     result = spearmanr(d_high, d_low)
-    rho = float(result[0]) if hasattr(result, "__getitem__") else float(result.statistic)  # type: ignore[union-attr]
+    rho = (
+        float(result[0]) if hasattr(result, "__getitem__") else float(result.statistic)
+    )  # type: ignore[union-attr]
     return 0.0 if np.isnan(rho) else rho

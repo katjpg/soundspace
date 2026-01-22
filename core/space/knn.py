@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from typing import Any, Literal, TypeAlias
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
 from sklearn.neighbors import NearestNeighbors
 
-SymmetrizeMode: TypeAlias = Literal["max", "mean", "min"]
-NNAlgorithm: TypeAlias = Literal["auto", "ball_tree", "kd_tree", "brute"]
+from dtypes import NNAlgorithm, SymmetrizeMode
 
 
 @dataclass(frozen=True)

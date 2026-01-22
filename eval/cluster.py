@@ -1,13 +1,9 @@
 from dataclasses import dataclass
-from typing import TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 from sklearn.metrics import silhouette_score
 
-
-FloatArray: TypeAlias = NDArray[np.floating]
-IntArray: TypeAlias = NDArray[np.integer]
+from dtypes import FloatArray, IntArray
 
 
 @dataclass(frozen=True, slots=True)

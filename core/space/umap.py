@@ -135,7 +135,9 @@ def _validate_embeddings_matrix(
     if min_norm <= 0.0:
         raise ValueError("embeddings contain a zero-norm vector; cosine is ill-posed.")
     if max_norm / min_norm > 10.0:
-        anomalies.append("large embedding norm variation; cosine neighborhoods may be unstable")
+        anomalies.append(
+            "large embedding norm variation; cosine neighborhoods may be unstable"
+        )
 
     X = np.asarray(embeddings, dtype=np.float32)
     return X, tuple(anomalies)
