@@ -2,13 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from eval.manifold import (
-    FloatArray,
-    Shepard,
-    Trustworthiness,
-    score_shepard,
-    score_trustworthiness,
-)
+from eval.manifold import FloatArray, ProjectionQuality, score_projection_quality
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +21,7 @@ class UMAPConfig:
     metric : str
         Distance metric in high-D. SoundSpace defaults to cosine for CLAP-style embeddings.
     compute_quality : bool
-        If True, compute trustworthiness/continuity/LCMC and Shepard correlations.
+        If True, compute trustworthiness/continuity and Shepard correlations.
     quality_k : int | None
         Neighborhood size for trustworthiness/continuity evaluation. If None, uses
         min(n_neighbors, 15).
@@ -35,10 +29,6 @@ class UMAPConfig:
         If set, evaluate quality metrics on a deterministic subsample to bound O(n^2).
     quality_seed : int
         Seed for diagnostic subsampling and pair sampling.
-    quality_reference : bool
-        If True, attempt an sklearn trustworthiness cross-check when available.
-    shepard_n_pairs : int
-        Number of random pairs for Shepard rank correlation.
     """
 
     n_neighbors: int = 15
@@ -50,8 +40,6 @@ class UMAPConfig:
     quality_k: int | None = None
     quality_subsample_n: int | None = None
     quality_seed: int = 42
-    quality_reference: bool = False
-    shepard_n_pairs: int = 5000
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,9 +67,7 @@ class UMAPResult:
     coords: FloatArray
     diagnostics: UMAPDiagnostics
     anomalies: tuple[str, ...]
-
-    trustworthiness: Trustworthiness | None
-    shepard: Shepard | None
+    quality: ProjectionQuality | None
 
 
 def umap_layout(embeddings: FloatArray, config: UMAPConfig | None = None) -> UMAPResult:
@@ -97,13 +83,6 @@ def umap_layout(embeddings: FloatArray, config: UMAPConfig | None = None) -> UMA
     -------
     UMAPResult
         2D coordinates with validation diagnostics and optional quality metrics.
-
-    Raises
-    ------
-    ValueError
-        If embeddings are invalid or configuration parameters are out of range.
-    ImportError
-        If the optional dependency `umap-learn` is not installed.
     """
     cfg = config or UMAPConfig()
     X, anomalies = _validate_embeddings_matrix(embeddings=embeddings, cfg=cfg)
@@ -111,10 +90,9 @@ def umap_layout(embeddings: FloatArray, config: UMAPConfig | None = None) -> UMA
     coords = _fit_umap_2d(embeddings=X, cfg=cfg)
     diagnostics = _compute_layout_diagnostics(embeddings=X, coords=coords, cfg=cfg)
 
-    trust: Trustworthiness | None = None
-    shep: Shepard | None = None
+    quality: ProjectionQuality | None = None
     if cfg.compute_quality:
-        trust, shep, quality_anomalies = _compute_quality_metrics(
+        quality, quality_anomalies = _compute_quality_metrics(
             embeddings=X, coords=coords, cfg=cfg
         )
         anomalies = tuple([*anomalies, *quality_anomalies])
@@ -123,8 +101,7 @@ def umap_layout(embeddings: FloatArray, config: UMAPConfig | None = None) -> UMA
         coords=coords,
         diagnostics=diagnostics,
         anomalies=anomalies,
-        trustworthiness=trust,
-        shepard=shep,
+        quality=quality,
     )
 
 
@@ -232,9 +209,8 @@ def _compute_quality_metrics(
     embeddings: FloatArray,
     coords: FloatArray,
     cfg: UMAPConfig,
-) -> tuple[Trustworthiness, Shepard, tuple[str, ...]]:
-    anomalies: list[str] = []
-
+) -> tuple[ProjectionQuality, tuple[str, ...]]:
+    """Compute projection quality metrics."""
     n = int(embeddings.shape[0])
     k_default = min(int(cfg.n_neighbors), 15)
     k = int(cfg.quality_k) if cfg.quality_k is not None else k_default
@@ -242,26 +218,16 @@ def _compute_quality_metrics(
     if k <= 0:
         raise ValueError(f"quality_k must be positive, got {k}.")
     if k >= (n / 2.0):
-        raise ValueError(f"quality_k must be < n/2 for trustworthiness, got k={k}, n={n}.")
+        raise ValueError(f"quality_k must be < n/2, got k={k}, n={n}.")
 
-    trust = score_trustworthiness(
-        embeddings,
-        coords,
+    quality = score_projection_quality(
+        X_high=embeddings,
+        X_low=coords,
         k=k,
         metric_high="cosine",
         metric_low="euclidean",
-        reference=bool(cfg.quality_reference),
         subsample_n=cfg.quality_subsample_n,
-        subsample_seed=int(cfg.quality_seed),
-    )
-
-    shep = score_shepard(
-        embeddings,
-        coords,
-        n_pairs=int(cfg.shepard_n_pairs),
         seed=int(cfg.quality_seed),
     )
 
-    anomalies.extend(trust.anomalies)
-    anomalies.extend(shep.anomalies)
-    return trust, shep, tuple(anomalies)
+    return quality, ()
