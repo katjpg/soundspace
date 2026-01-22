@@ -1,12 +1,13 @@
 {
   "T1": [
     "adventure",
+    "awareness",
     "biographical",
     "country life",
     "dance party",
     "despair",
+    "disappointment",
     "dreaming",
-    "everyday life",
     "fear",
     "friendship",
     "goodbyes",
@@ -22,7 +23,6 @@
     "poetry",
     "promises",
     "relationships",
-    "reminiscing",
     "romance",
     "separation",
     "sorrow",
@@ -34,38 +34,6 @@
     "yearning"
   ],
   "T2": [
-    "affirmation",
-    "at the office",
-    "autumn",
-    "background music",
-    "breakup",
-    "celebration",
-    "christmas party",
-    "comfort",
-    "d-i-v-o-r-c-e",
-    "early morning",
-    "family gatherings",
-    "feeling blue",
-    "heartache",
-    "holidays",
-    "introspection",
-    "jealousy",
-    "late night",
-    "long walk",
-    "meditation",
-    "monday morning",
-    "parenthood",
-    "rainy day",
-    "reflection",
-    "regret",
-    "relaxation",
-    "solitude",
-    "stay in bed",
-    "sunday afternoon",
-    "sweet dreams",
-    "winter"
-  ],
-  "T3": [
     "at the beach",
     "club",
     "cool & cocky",
@@ -85,7 +53,6 @@
     "picnic",
     "playful",
     "pool party",
-    "reunion",
     "revolutionary",
     "road trip",
     "small gathering",
@@ -97,14 +64,13 @@
     "vacation",
     "victory"
   ],
-  "T4": [
+  "T3": [
     "anger/hostility",
-    "awareness",
     "celebrities",
     "crime",
     "death",
     "destiny",
-    "disappointment",
+    "everyday life",
     "family",
     "fantasy",
     "halloween",
@@ -123,7 +89,44 @@
     "world view",
     "zeitgeist"
   ],
+  "T4": [
+    "affirmation",
+    "at the office",
+    "background music",
+    "celebration",
+    "christmas party",
+    "comfort",
+    "early morning",
+    "family gatherings",
+    "holidays",
+    "meditation",
+    "monday morning",
+    "parenthood",
+    "rainy day",
+    "relaxation",
+    "reminiscing",
+    "reunion",
+    "spring",
+    "stay in bed",
+    "sunday afternoon",
+    "sweet dreams",
+    "winter"
+  ],
   "T5": [
+    "autumn",
+    "breakup",
+    "d-i-v-o-r-c-e",
+    "feeling blue",
+    "heartache",
+    "introspection",
+    "jealousy",
+    "late night",
+    "long walk",
+    "reflection",
+    "regret",
+    "solitude"
+  ],
+  "T6": [
     "affection/fondness",
     "anniversary",
     "dinner ambiance",
@@ -133,10 +136,9 @@
     "seduction",
     "sex",
     "slow dance",
-    "spring",
     "wedding"
   ],
-  "T6": [
+  "T7": [
     "word play"
   ]
 }
