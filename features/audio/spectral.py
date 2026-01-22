@@ -4,8 +4,9 @@ from pathlib import Path
 import librosa
 import numpy as np
 
-from .io import SAMPLE_RATE, load_audio
+from .io import load_audio
 
+ESSENTIA_SR = 44100
 N_MFCC = 5
 
 
@@ -19,9 +20,11 @@ class SpectralFeatures:
     spectral_centroid_mean: float
     spectral_centroid_std: float
     spectral_contrast_mean: float
+    inharmonicity_mean: float
+    inharmonicity_std: float
 
 
-def extract_spectral(audio_path: Path, *, sr: int = SAMPLE_RATE) -> SpectralFeatures:
+def extract_spectral(audio_path: Path, *, sr: int = ESSENTIA_SR) -> SpectralFeatures:
     """Extract spectral features from audio file."""
     y, sr = load_audio(audio_path, sr=sr)
     return compute_spectral(y, sr)
@@ -32,6 +35,7 @@ def compute_spectral(y: np.ndarray, sr: int) -> SpectralFeatures:
     mfcc_means = _compute_mfcc_means(y, sr, N_MFCC)
     centroid_mean, centroid_std = _compute_centroid_stats(y, sr)
     contrast_mean = _compute_contrast_mean(y, sr)
+    inharmonicity = _extract_inharmonicity(y, sr)
 
     return SpectralFeatures(
         mfcc_1_mean=mfcc_means[0],
@@ -42,6 +46,8 @@ def compute_spectral(y: np.ndarray, sr: int) -> SpectralFeatures:
         spectral_centroid_mean=centroid_mean,
         spectral_centroid_std=centroid_std,
         spectral_contrast_mean=contrast_mean,
+        inharmonicity_mean=inharmonicity["inharmonicity_mean"],
+        inharmonicity_std=inharmonicity["inharmonicity_std"],
     )
 
 
@@ -75,3 +81,56 @@ def _compute_contrast_mean(y: np.ndarray, sr: int) -> float:
         return 0.0
 
     return float(np.mean(values))
+
+
+def _extract_inharmonicity(y: np.ndarray, sr: int) -> dict[str, float]:
+    """Extract inharmonicity using essentia frame-by-frame analysis."""
+    try:
+        import essentia.standard as es
+    except ImportError:
+        return {"inharmonicity_mean": 0.0, "inharmonicity_std": 0.0}
+
+    try:
+        audio = np.asarray(y, dtype=np.float32)
+        if sr != ESSENTIA_SR:
+            resampler = es.Resample(inputSampleRate=sr, outputSampleRate=ESSENTIA_SR)
+            audio = resampler(audio)
+
+        frame_size = 2048
+        hop_size = 512
+        inharmonicity_values = []
+
+        windowing = es.Windowing(type="hann", size=frame_size)
+        spectrum = es.Spectrum(size=frame_size)
+        spectral_peaks = es.SpectralPeaks(
+            sampleRate=ESSENTIA_SR,
+            maxPeaks=50,
+            minFrequency=20,
+            maxFrequency=ESSENTIA_SR / 2,
+        )
+        pitch_yin = es.PitchYinFFT(sampleRate=ESSENTIA_SR)
+        inharmonicity_algo = es.Inharmonicity()
+
+        for i in range(0, len(audio) - frame_size, hop_size):
+            frame = audio[i : i + frame_size]
+            windowed = windowing(frame)
+            spec = spectrum(windowed)
+            frequencies, magnitudes = spectral_peaks(spec)
+            pitch, _ = pitch_yin(spec)
+
+            if pitch > 0 and len(frequencies) > 1:
+                inharm = inharmonicity_algo(frequencies, magnitudes)
+                if not np.isnan(inharm) and inharm >= 0:
+                    inharmonicity_values.append(inharm)
+
+        if len(inharmonicity_values) == 0:
+            return {"inharmonicity_mean": 0.0, "inharmonicity_std": 0.0}
+
+        arr = np.array(inharmonicity_values, dtype=np.float32)
+        return {
+            "inharmonicity_mean": float(np.mean(arr)),
+            "inharmonicity_std": float(np.std(arr)),
+        }
+
+    except Exception:
+        return {"inharmonicity_mean": 0.0, "inharmonicity_std": 0.0}
