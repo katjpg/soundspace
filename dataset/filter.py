@@ -26,7 +26,7 @@ METADATA_COLUMNS: dict[str, str] = {
     "Themes": "theme",
     "ThemeWeights": "theme_weights",
     "Styles": "style",
-    "StylesWeights": "style_weights",
+    "StyleWeights": "style_weights",
 }
 
 AV_COLUMNS: dict[str, str] = {
