@@ -80,18 +80,7 @@ class LeidenResult:
 def leiden_partition(
     graph: AffinityAdjacency, config: LeidenConfig | None = None
 ) -> LeidenResult:
-    """Run Leiden community detection on an affinity adjacency.
-
-    Args
-    ----
-    graph (AffinityAdjacency)    : Domain object exposing `.adjacency` as CSR affinity weights.
-    config (LeidenConfig | None) : Leiden configuration. Default is None.
-
-    Returns
-    -------
-    LeidenResult
-        Membership array, modularity, and validation diagnostics/anomalies.
-    """
+    """Run Leiden community detection via affinity adjacency."""
     cfg = config or LeidenConfig()
     adjacency = graph.adjacency
 

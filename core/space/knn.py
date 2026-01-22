@@ -82,18 +82,7 @@ class KNN:
         return int(shape[0])
 
     def reciprocity(self) -> float:
-        """Compute the fraction of directed edges that are reciprocated.
-
-        Returns
-        -------
-        float
-            mutual.nnz / directed.nnz, or 0.0 when the directed cache is empty.
-
-        Raises
-        ------
-        ValueError
-            If directed_adjacency is not available.
-        """
+        """Compute the fraction of directed edges that are reciprocated."""
         directed = self.directed_adjacency
         if directed is None:
             raise ValueError(
@@ -113,23 +102,7 @@ class KNN:
 
 
 def build_knn(embeddings: np.ndarray, config: KNNConfig | None = None) -> KNN:
-    """Build a kNN affinity graph from an embedding matrix.
-
-    Args
-    ----
-    embeddings (np.ndarray)      : Embedding matrix of shape (n_samples, n_dims).
-    config (KNNConfig | None)    : Construction configuration. Default is None.
-
-    Returns
-    -------
-    KNN
-        KNN graph with an affinity adjacency and optional directed caches.
-
-    Raises
-    ------
-    ValueError
-        If embeddings is not 2D, contains non-finite values, or k is out of range.
-    """
+    """Build a kNN affinity graph from an embedding matrix."""
     cfg = config or KNNConfig()
     _validate_embeddings(embeddings=embeddings, k=cfg.k)
 

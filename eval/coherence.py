@@ -57,18 +57,7 @@ def score_semantic_quality(
     tracks: Sequence[Track],
     membership: IntArray,
 ) -> SemanticQuality:
-    """
-    Compute semantic coherence metrics for community assignments.
-
-    Args
-    ----
-        tracks    (Sequence[Track]) : list of Track objects with tag and V-A annotations.
-        membership       (IntArray) : community labels of shape (n_tracks,).
-
-    Returns
-    -------
-        (SemanticQuality) : aggregate and per-label semantic quality metrics.
-    """
+    """Compute semantic coherence metrics for community assignments."""
     if len(tracks) != len(membership):
         raise ValueError(
             f"tracks length ({len(tracks)}) must match membership length ({len(membership)})"

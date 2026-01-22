@@ -71,19 +71,7 @@ class UMAPResult:
 
 
 def umap_layout(embeddings: FloatArray, config: UMAPConfig | None = None) -> UMAPResult:
-    """
-    Compute a 2D UMAP layout from an embedding matrix.
-
-    Args
-    ----
-    embeddings (FloatArray) : Embedding matrix of shape (n_samples, n_dims).
-    config (UMAPConfig | None) : UMAP configuration. Default is None.
-
-    Returns
-    -------
-    UMAPResult
-        2D coordinates with validation diagnostics and optional quality metrics.
-    """
+    """Compute a 2D UMAP layout from an embedding matrix."""
     cfg = config or UMAPConfig()
     X, anomalies = _validate_embeddings_matrix(embeddings=embeddings, cfg=cfg)
 
