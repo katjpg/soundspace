@@ -18,17 +18,7 @@ def _init_worker() -> None:
 
 
 def _extract_single_track(args: tuple[str, str]) -> dict[str, Any]:
-    """
-    Extract all audio features for a single track.
-
-    Args
-    ----
-        args (tuple[str, str]) : (audio_path, song_id) tuple for pickling.
-
-    Returns
-    -------
-        (dict[str, Any]) : feature dictionary with song_id and all features.
-    """
+    """Extract all audio features for a single track."""
     audio_path, song_id = args
     path = Path(audio_path)
 
