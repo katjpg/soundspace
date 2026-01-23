@@ -15,5 +15,5 @@ wheels/
 /docs
 
 # for dev / prototyping purposes
-/notebooks
+/notebooks/tests
 /dataset/output
