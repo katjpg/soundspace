@@ -307,9 +307,10 @@ def _extract_beats_loudness(y: np.ndarray, sr: int) -> dict[str, float]:
 
         beats_loudness = es.BeatsLoudness(
             sampleRate=ESSENTIA_SR,
+            beats=beats,
             frequencyBands=[20, 150, 400, 3200, 7000, ESSENTIA_SR / 2],
         )
-        loudness, loudness_band_ratio = beats_loudness(audio, beats)
+        loudness, loudness_band_ratio = beats_loudness(audio)
 
         if len(loudness) == 0:
             return defaults
