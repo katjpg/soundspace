@@ -11,6 +11,24 @@ models:
     device: null
     dtype: float32
 
+  muq_mulan:
+    provider: huggingface
+    model_id: OpenMuQ/MuQ-MuLan-large
+    device: null
+    dtype: float32
+
+parameters:
+  knn:
+    k: 10
+  leiden:
+    resolution: 1.0
+    seed: 42
+  umap:
+    n_neighbors: 100
+    min_dist: 0.10
+    seed: 42
+    metric: cosine
+
 datasets:
   merge:
     root: merge-balanced

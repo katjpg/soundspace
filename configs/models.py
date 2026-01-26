@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +23,44 @@ class Model:
 
 
 @dataclass(frozen=True, slots=True)
+class KNNParameters:
+    """k-nearest neighbor graph construction parameters."""
+
+    k: int = 10
+
+
+@dataclass(frozen=True, slots=True)
+class LeidenParameters:
+    """Leiden community detection parameters."""
+
+    resolution: float = 1.0
+    seed: int | None = 42
+
+
+@dataclass(frozen=True, slots=True)
+class UMAPParameters:
+    """UMAP dimensionality reduction parameters."""
+
+    n_neighbors: int = 100
+    min_dist: float = 0.10
+    seed: int | None = 42
+    metric: str = "cosine"
+
+
+@dataclass(frozen=True, slots=True)
+class PipelineParameters:
+    """Tunable parameters for the embedding-to-visualization pipeline."""
+
+    knn: KNNParameters = field(default_factory=KNNParameters)
+    leiden: LeidenParameters = field(default_factory=LeidenParameters)
+    umap: UMAPParameters = field(default_factory=UMAPParameters)
+
+
+@dataclass(frozen=True, slots=True)
 class ModelConfig:
     paths: PathConfig
     models: dict[str, Model]
+    parameters: PipelineParameters = field(default_factory=PipelineParameters)
 
 
 def load_config(config_path: Path) -> ModelConfig:
@@ -33,7 +68,8 @@ def load_config(config_path: Path) -> ModelConfig:
     raw = _load_yaml(config_path)
     paths = _load_paths(config_path, raw)
     models = _load_models(raw)
-    return ModelConfig(paths=paths, models=models)
+    parameters = _load_parameters(raw)
+    return ModelConfig(paths=paths, models=models, parameters=parameters)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -96,3 +132,23 @@ def _load_models(raw: dict[str, Any]) -> dict[str, Model]:
         )
 
     return models
+
+
+def _load_parameters(raw: dict[str, Any]) -> PipelineParameters:
+    """Load optional parameters section, (or alternatively use defaults)."""
+    params_raw = raw.get("parameters")
+    if params_raw is None:
+        return PipelineParameters()
+
+    if not isinstance(params_raw, dict):
+        raise ValueError("parameters section must be a dict")
+
+    knn_raw = params_raw.get("knn", {})
+    leiden_raw = params_raw.get("leiden", {})
+    umap_raw = params_raw.get("umap", {})
+
+    return PipelineParameters(
+        knn=KNNParameters(**knn_raw) if knn_raw else KNNParameters(),
+        leiden=LeidenParameters(**leiden_raw) if leiden_raw else LeidenParameters(),
+        umap=UMAPParameters(**umap_raw) if umap_raw else UMAPParameters(),
+    )
